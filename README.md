@@ -124,15 +124,15 @@ current and previous week, grading picks and settling playoff matchups. On Verce
 `CRON_SECRET` to the same value as `SYNC_SECRET` so the platform's `Authorization: Bearer`
 header is accepted.
 
-**Cron frequency.** `vercel.json` schedules the job once a day, because Vercel's Hobby plan
-only permits daily cron and rejects the deployment outright for anything more frequent. Daily
-is fine out of season but useless on a Saturday — scores would sit stale for hours. Two ways
-to get game-day frequency:
+**Scheduling.** `vercel.json` deliberately declares no cron. Vercel's Hobby plan restricts
+cron jobs enough to be more trouble than they are worth, and daily runs would leave Saturday
+scores stale for hours regardless. Drive the sync externally instead:
 
-- Point an external scheduler (cron-job.org, GitHub Actions, an Uptime monitor) at
+- Point a scheduler (cron-job.org, GitHub Actions, an uptime monitor) at
   `https://<your-domain>/api/cron?secret=<SYNC_SECRET>` every 10–15 minutes. The route is
   idempotent, so running it often is harmless.
-- Or upgrade to Vercel Pro and change the schedule to `0 */2 * * *` (or tighter).
+- Or, on Vercel Pro, add a `crons` block back to `vercel.json`:
+  `{ "crons": [{ "path": "/api/cron", "schedule": "0 */2 * * *" }] }`
 
 ---
 
