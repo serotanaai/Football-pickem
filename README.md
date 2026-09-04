@@ -120,9 +120,19 @@ curl -X POST "http://localhost:3000/api/sync/games?secret=$SYNC_SECRET"
 ```
 
 `/api/cron` does all of it in one call — seeding teams if the table is empty, pulling the
-current and previous week, grading picks and settling playoff matchups. `vercel.json`
-schedules it every two hours. On Vercel, set `CRON_SECRET` to the same value as `SYNC_SECRET`
-so the platform's `Authorization: Bearer` header is accepted.
+current and previous week, grading picks and settling playoff matchups. On Vercel, set
+`CRON_SECRET` to the same value as `SYNC_SECRET` so the platform's `Authorization: Bearer`
+header is accepted.
+
+**Cron frequency.** `vercel.json` schedules the job once a day, because Vercel's Hobby plan
+only permits daily cron and rejects the deployment outright for anything more frequent. Daily
+is fine out of season but useless on a Saturday — scores would sit stale for hours. Two ways
+to get game-day frequency:
+
+- Point an external scheduler (cron-job.org, GitHub Actions, an Uptime monitor) at
+  `https://<your-domain>/api/cron?secret=<SYNC_SECRET>` every 10–15 minutes. The route is
+  idempotent, so running it often is harmless.
+- Or upgrade to Vercel Pro and change the schedule to `0 */2 * * *` (or tighter).
 
 ---
 
