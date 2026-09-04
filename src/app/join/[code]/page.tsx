@@ -4,7 +4,11 @@ import { AppShell } from "@/components/AppShell";
 import { Badge } from "@/components/Badge";
 import { createClient } from "@/lib/supabase/server";
 import { scopeBadge } from "@/lib/format";
-import { leagueCountThisSeason, MAX_LEAGUES_PER_SEASON } from "@/lib/league";
+import {
+  leagueCountThisSeason,
+  MAX_LEAGUE_MEMBERS,
+  MAX_LEAGUES_PER_SEASON,
+} from "@/lib/league";
 import { JoinForm } from "../JoinForm";
 
 export const dynamic = "force-dynamic";
@@ -29,10 +33,11 @@ export default async function InvitePage({
   const { data } = await supabase.rpc("league_preview_by_code", { p_code: code });
   const league = data?.[0] ?? null;
 
-  // Say so before they click, rather than letting the trigger refuse the join.
+  // Say so before they click, rather than letting a trigger refuse the join.
   const atCap = league
     ? (await leagueCountThisSeason(user.id, league.season)) >= MAX_LEAGUES_PER_SEASON
     : false;
+  const isFull = league ? Number(league.member_count) >= MAX_LEAGUE_MEMBERS : false;
 
   return (
     <AppShell email={user.email}>
@@ -62,6 +67,19 @@ export default async function InvitePage({
               <Link className="btn btn-primary" href={`/leagues/${league.slug}`}>
                 Go to the league
               </Link>
+            ) : isFull ? (
+              <div className="surface" style={{ padding: "1.25rem" }}>
+                <p style={{ margin: "0 0 0.5rem", fontWeight: 650 }}>
+                  This league is full.
+                </p>
+                <p className="muted" style={{ margin: "0 0 1rem", fontSize: "0.9rem" }}>
+                  It has all {MAX_LEAGUE_MEMBERS} of its members. Ask whoever sent you the link to
+                  free up a place, or start a league of your own.
+                </p>
+                <Link className="btn" href="/join">
+                  Start a league
+                </Link>
+              </div>
             ) : atCap ? (
               <div className="surface" style={{ padding: "1.25rem" }}>
                 <p style={{ margin: "0 0 0.5rem", fontWeight: 650 }}>
