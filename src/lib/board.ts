@@ -126,3 +126,74 @@ export async function loadMembers(leagueId: string): Promise<Member[]> {
 export function isLocked(game: Pick<Tables<"games">, "start_time">): boolean {
   return new Date(game.start_time).getTime() <= Date.now();
 }
+
+/** The row that seals a member's week, or null if they can still pick. */
+export async function loadSubmission(
+  leagueId: string,
+  userId: string,
+  week: number,
+): Promise<Tables<"pick_submissions"> | null> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("pick_submissions")
+    .select("*")
+    .eq("league_id", leagueId)
+    .eq("user_id", userId)
+    .eq("week", week)
+    .maybeSingle();
+  return data ?? null;
+}
+
+export type GameConsensus = {
+  /** null until the game kicks off — RLS hides other members' picks before then. */
+  revealed: boolean;
+  total: number;
+  homeCount: number;
+  awayCount: number;
+  homePct: number;
+  awayPct: number;
+  myTeamId: number | null;
+};
+
+/**
+ * How the league split on each game. Only meaningful once a game has started:
+ * before kickoff the picks policy returns nothing but your own, so a percentage
+ * would just say 100% you.
+ */
+export async function loadWeekConsensus(
+  leagueId: string,
+  week: number,
+  userId: string,
+  games: BoardGame[],
+): Promise<Map<number, GameConsensus>> {
+  const supabase = await createClient();
+  const { data: picks } = await supabase
+    .from("picks")
+    .select("game_id, team_id, user_id")
+    .eq("league_id", leagueId)
+    .eq("week", week);
+
+  const out = new Map<number, GameConsensus>();
+
+  for (const game of games) {
+    const forGame = (picks ?? []).filter((p) => p.game_id === game.id);
+    const mine = forGame.find((p) => p.user_id === userId);
+    const revealed = isLocked(game);
+    const counted = revealed ? forGame : [];
+    const homeCount = counted.filter((p) => p.team_id === game.home_team_id).length;
+    const awayCount = counted.filter((p) => p.team_id === game.away_team_id).length;
+    const total = homeCount + awayCount;
+
+    out.set(game.id, {
+      revealed,
+      total,
+      homeCount,
+      awayCount,
+      homePct: total ? Math.round((homeCount / total) * 100) : 0,
+      awayPct: total ? Math.round((awayCount / total) * 100) : 0,
+      myTeamId: mine?.team_id ?? null,
+    });
+  }
+
+  return out;
+}
