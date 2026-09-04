@@ -169,3 +169,219 @@ tr:last-child td {
   color: var(--muted);
   margin: 0.55rem 0 0;
 }
+
+/* ===================== matchup cards: glass, shine, tug-of-war ===================== */
+
+.glass {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border-radius: 14px;
+  border: 1px solid var(--glass-edge);
+  background:
+    linear-gradient(160deg, var(--glass-top) 0%, var(--glass-bottom) 100%),
+    var(--surface);
+  box-shadow:
+    inset 0 1px 0 var(--glass-lip),
+    0 1px 2px rgba(12, 16, 22, 0.05),
+    0 8px 24px -16px rgba(12, 16, 22, 0.35);
+  backdrop-filter: blur(6px) saturate(115%);
+  -webkit-backdrop-filter: blur(6px) saturate(115%);
+}
+
+:root {
+  --glass-top: rgba(255, 255, 255, 0.72);
+  --glass-bottom: rgba(255, 255, 255, 0.28);
+  --glass-edge: rgba(18, 22, 28, 0.1);
+  --glass-shine: rgba(255, 255, 255, 0.55);
+  --glass-lip: rgba(255, 255, 255, 0.9);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --glass-top: rgba(255, 255, 255, 0.07);
+    --glass-bottom: rgba(255, 255, 255, 0.015);
+    --glass-edge: rgba(255, 255, 255, 0.1);
+    --glass-shine: rgba(255, 255, 255, 0.14);
+    --glass-lip: rgba(255, 255, 255, 0.08);
+  }
+}
+
+:root[data-theme="dark"] {
+  --glass-top: rgba(255, 255, 255, 0.07);
+  --glass-bottom: rgba(255, 255, 255, 0.015);
+  --glass-edge: rgba(255, 255, 255, 0.1);
+  --glass-shine: rgba(255, 255, 255, 0.14);
+  --glass-lip: rgba(255, 255, 255, 0.08);
+}
+
+/* A slow sweep of light across the card. Staggered per card by the inline
+   --shine-delay so the slate shimmers in sequence rather than in unison. */
+.glass::after {
+  content: "";
+  position: absolute;
+  inset: -40% -60%;
+  z-index: 2;
+  pointer-events: none;
+  background: linear-gradient(
+    105deg,
+    transparent 38%,
+    var(--glass-shine) 47%,
+    transparent 56%
+  );
+  transform: translateX(-70%);
+  animation: card-shine 9s ease-in-out infinite;
+  animation-delay: var(--shine-delay, 0s);
+}
+
+@keyframes card-shine {
+  0%, 62% { transform: translateX(-70%); }
+  84%, 100% { transform: translateX(70%); }
+}
+
+/* --------------------------------- tug bars --------------------------------- */
+
+.tug {
+  display: grid;
+  gap: 0.3rem;
+  position: relative;
+  z-index: 1;
+}
+
+.tug-row {
+  display: flex;
+  align-items: stretch;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+.tug-row.is-home {
+  flex-direction: row-reverse;
+}
+
+/* The always-solid identity block, so the logo and name are legible whatever
+   the pick rate does to the bar behind them. */
+.tug-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-shrink: 0;
+  padding: 0.4rem 0.6rem;
+  border-radius: 9px;
+  min-width: 0;
+  max-width: 62%;
+}
+
+.tug-badge img {
+  width: 26px;
+  height: 26px;
+  object-fit: contain;
+  flex-shrink: 0;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.35));
+}
+
+.tug-name {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+}
+
+.tug-name b {
+  font-size: 0.86rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.15;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tug-name span {
+  font-size: 0.66rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  opacity: 0.78;
+}
+
+/* The track the two fills push into. */
+.tug-track {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  border-radius: 7px;
+  background: var(--border);
+  overflow: hidden;
+}
+
+.tug-fill {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  border-radius: 7px;
+  transition: width 700ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.tug-row.is-home .tug-fill {
+  left: auto;
+  right: 0;
+}
+
+.tug-pct {
+  align-self: center;
+  flex-shrink: 0;
+  font-size: 0.78rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  min-width: 3ch;
+  text-align: right;
+}
+
+.tug-score {
+  align-self: center;
+  flex-shrink: 0;
+  font-size: 1.05rem;
+  font-weight: 750;
+  font-variant-numeric: tabular-nums;
+  min-width: 2ch;
+  text-align: center;
+}
+
+/* ------------------------------ table team cell ------------------------------ */
+
+.team-cell {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  min-width: 58px;
+}
+
+.team-cell img {
+  width: 30px;
+  height: 30px;
+  object-fit: contain;
+}
+
+.team-cell b {
+  font-size: 0.7rem;
+  font-weight: 650;
+  line-height: 1.15;
+  text-align: center;
+  max-width: 74px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.team-rank {
+  font-size: 0.64rem;
+  font-weight: 800;
+  color: var(--muted);
+  letter-spacing: 0.02em;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .glass::after { animation: none; opacity: 0; }
+  .tug-fill { transition: none; }
+}
