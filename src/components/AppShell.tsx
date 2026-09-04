@@ -19,9 +19,6 @@ export function AppShell({
             <Link href="/dashboard" className="nav-link">
               My leagues
             </Link>
-            <Link href="/leagues/new" className="nav-link">
-              New league
-            </Link>
             <Link href="/join" className="nav-link">
               Join
             </Link>

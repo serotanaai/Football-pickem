@@ -2,9 +2,15 @@ import Link from "next/link";
 import { AppShell } from "@/components/AppShell";
 import { Badge } from "@/components/Badge";
 import { Reveal } from "@/components/Reveal";
+import { CapNotice, LeagueActionButton } from "@/components/CapNotice";
 import { createClient } from "@/lib/supabase/server";
-import { requireUser } from "@/lib/league";
+import {
+  leagueCountThisSeason,
+  MAX_LEAGUES_PER_SEASON,
+  requireUser,
+} from "@/lib/league";
 import { ordinal, scopeBadge } from "@/lib/format";
+import { DEFAULT_SEASON } from "@/lib/env";
 
 export const dynamic = "force-dynamic";
 
@@ -61,6 +67,9 @@ export default async function DashboardPage() {
 
   const sorted = [...(leagues ?? [])].sort((a, b) => a.name.localeCompare(b.name));
 
+  const leagueCount = await leagueCountThisSeason(user.id, DEFAULT_SEASON);
+  const atCap = leagueCount >= MAX_LEAGUES_PER_SEASON;
+
   return (
     <AppShell email={user.email}>
       <div
@@ -74,15 +83,21 @@ export default async function DashboardPage() {
         }}
       >
         <h1 style={{ fontSize: "1.4rem", margin: 0, letterSpacing: "-0.02em" }}>My leagues</h1>
-        <div style={{ display: "flex", gap: "0.5rem" }}>
-          <Link className="btn" href="/join">
+        <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+          <LeagueActionButton href="/join" atCap={atCap}>
             Join a league
-          </Link>
-          <Link className="btn btn-primary" href="/leagues/new">
+          </LeagueActionButton>
+          <LeagueActionButton href="/leagues/new" atCap={atCap} primary>
             New league
-          </Link>
+          </LeagueActionButton>
         </div>
       </div>
+
+      {atCap ? (
+        <div style={{ marginBottom: "1.25rem" }}>
+          <CapNotice count={leagueCount} season={DEFAULT_SEASON} />
+        </div>
+      ) : null}
 
       {sorted.length === 0 ? (
         <div className="surface" style={{ padding: "2.5rem 1.5rem", textAlign: "center" }}>
@@ -91,9 +106,9 @@ export default async function DashboardPage() {
             Create one and send your friends the invite link, or paste an invite link you were
             sent.
           </p>
-          <Link className="btn btn-primary" href="/leagues/new">
+          <LeagueActionButton href="/leagues/new" atCap={atCap} primary>
             Create a league
-          </Link>
+          </LeagueActionButton>
         </div>
       ) : (
         <div

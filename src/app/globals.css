@@ -164,9 +164,18 @@ a {
     var(--e1);
 }
 
-.btn:disabled {
-  opacity: 0.55;
+.btn:disabled,
+.btn.is-disabled {
+  opacity: 0.5;
   cursor: not-allowed;
+  box-shadow: none;
+  filter: grayscale(0.4);
+}
+
+/* A link cannot be disabled, so at the cap these render as plain spans that
+   still look like the button they replace. */
+.btn.is-disabled {
+  pointer-events: none;
 }
 
 .btn-primary {
