@@ -71,6 +71,7 @@ export default async function LeagueOverviewPage({
       school: team?.school ?? "TBD",
       abbreviation: team?.abbreviation ?? null,
       logo: team?.logo ?? null,
+      color: team?.color ?? null,
       rank,
       score,
       pct,

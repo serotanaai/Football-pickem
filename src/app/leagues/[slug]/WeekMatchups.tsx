@@ -2,14 +2,15 @@
 
 import { useState } from "react";
 import { Badge } from "@/components/Badge";
-import { TeamChip } from "@/components/TeamChip";
 import { LocalTime } from "@/components/LocalTime";
+import { teamFill, teamInk, teamWash } from "@/lib/teamColor";
 
 export type MatchupSide = {
   teamId: number;
   school: string;
   abbreviation: string | null;
   logo: string | null;
+  color: string | null;
   rank: number | null;
   score: number | null;
   pct: number;
@@ -39,10 +40,6 @@ function statusLabel(row: MatchupRow) {
   return null;
 }
 
-/**
- * The week's slate in kickoff order — every game on the board, whether or not
- * this member picked it. Table by default, since the point is a quick glance.
- */
 export function WeekMatchups({
   rows,
   memberCount,
@@ -87,118 +84,138 @@ export function WeekMatchups({
   );
 }
 
-// ------------------------------------------------------------------ table
+// ------------------------------------------------------------------- table
+
+function TeamCell({ side, won, lost }: { side: MatchupSide; won: boolean; lost: boolean }) {
+  return (
+    <span className="team-cell" style={{ opacity: lost ? 0.55 : 1 }}>
+      {side.logo ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={side.logo} alt="" />
+      ) : (
+        <span
+          aria-hidden
+          style={{
+            width: 30,
+            height: 30,
+            borderRadius: 6,
+            background: teamFill(side.color),
+          }}
+        />
+      )}
+      <b style={{ color: won ? "var(--accent)" : undefined }}>
+        {side.school}
+        {won ? " ✓" : ""}
+      </b>
+      {side.rank ? <span className="team-rank">#{side.rank}</span> : null}
+    </span>
+  );
+}
 
 function TableView({ rows }: { rows: MatchupRow[] }) {
   return (
     <div className="surface scroll-x">
-      <table style={{ minWidth: 520 }}>
+      <table style={{ minWidth: 560 }}>
         <thead>
           <tr>
-            <th>Matchup</th>
-            <th style={{ width: 74 }}>You</th>
-            <th style={{ width: 108 }}>League</th>
-            <th style={{ textAlign: "right", width: 96 }}>Result</th>
+            <th style={{ textAlign: "center" }}>Away</th>
+            <th style={{ textAlign: "center" }}>Home</th>
+            <th style={{ width: 118 }}>League split</th>
+            <th style={{ width: 78 }}>You</th>
+            <th style={{ textAlign: "right", width: 92 }}>Result</th>
           </tr>
         </thead>
         <tbody>
           {rows.map((row) => {
             const label = statusLabel(row);
+            const mySide =
+              row.myTeamId === row.home.teamId
+                ? row.home
+                : row.myTeamId === row.away.teamId
+                  ? row.away
+                  : null;
 
             return (
               <tr key={row.id}>
+                {[row.away, row.home].map((side) => {
+                  const won = row.completed && row.winnerTeamId === side.teamId;
+                  const lost = row.completed && row.winnerTeamId !== null && !won;
+                  return (
+                    <td key={side.teamId} style={{ textAlign: "center" }}>
+                      <TeamCell side={side} won={won} lost={lost} />
+                    </td>
+                  );
+                })}
+
                 <td>
-                  <div style={{ display: "grid", gap: "0.15rem", fontSize: "0.85rem" }}>
-                    {[row.away, row.home].map((side, i) => {
-                      const won = row.completed && row.winnerTeamId === side.teamId;
-                      const lost =
-                        row.completed && row.winnerTeamId !== null && !won;
-                      return (
+                  {row.revealed && row.totalPicks > 0 ? (
+                    <div style={{ display: "grid", gap: "3px" }}>
+                      {[row.away, row.home].map((side) => (
                         <span
                           key={side.teamId}
                           style={{
                             display: "flex",
                             alignItems: "center",
-                            gap: "0.3rem",
-                            fontWeight: won ? 700 : 500,
-                            color: won
-                              ? "var(--accent)"
-                              : lost
-                                ? "var(--muted)"
-                                : "var(--text)",
+                            gap: "0.35rem",
+                            fontSize: "0.72rem",
+                            fontVariantNumeric: "tabular-nums",
                           }}
                         >
-                          {i === 1 ? (
-                            <span className="muted" style={{ fontSize: "0.68rem" }}>
-                              @
-                            </span>
-                          ) : null}
-                          {side.rank ? (
-                            <span className="muted" style={{ fontSize: "0.72rem", fontWeight: 700 }}>
-                              #{side.rank}
-                            </span>
-                          ) : null}
-                          {side.school}
-                          {won ? " ✓" : ""}
+                          <span style={{ minWidth: "3ch", fontWeight: 700 }}>{side.pct}%</span>
+                          <span
+                            aria-hidden
+                            style={{
+                              flex: 1,
+                              height: 6,
+                              borderRadius: 3,
+                              background: "var(--border)",
+                              overflow: "hidden",
+                            }}
+                          >
+                            <span
+                              style={{
+                                display: "block",
+                                height: "100%",
+                                width: `${side.pct}%`,
+                                background: teamFill(side.color),
+                              }}
+                            />
+                          </span>
                         </span>
-                      );
-                    })}
-                    <span className="muted" style={{ fontSize: "0.72rem" }}>
-                      {label ?? <LocalTime iso={row.startTime} mode="kickoff" />}
-                      {row.broadcast ? ` · ${row.broadcast}` : ""}
+                      ))}
+                    </div>
+                  ) : (
+                    <span className="muted" style={{ fontSize: "0.74rem" }}>
+                      at kickoff
                     </span>
-                  </div>
+                  )}
                 </td>
 
                 <td>
-                  {row.myTeamId ? (
+                  {mySide ? (
                     <span
                       style={{
-                        fontSize: "0.82rem",
-                        fontWeight: 650,
-                        color:
-                          row.completed && row.winnerTeamId === row.myTeamId
-                            ? "var(--accent)"
-                            : row.completed
-                              ? "var(--muted)"
-                              : "var(--text)",
-                        textDecoration:
-                          row.completed && row.winnerTeamId !== row.myTeamId
-                            ? "line-through"
-                            : "none",
+                        display: "inline-block",
+                        padding: "0.15rem 0.4rem",
+                        borderRadius: 6,
+                        fontSize: "0.72rem",
+                        fontWeight: 700,
+                        background: teamFill(mySide.color),
+                        color: teamInk(mySide.color),
+                        opacity:
+                          row.completed && row.winnerTeamId !== mySide.teamId ? 0.5 : 1,
                       }}
                     >
-                      {(row.myTeamId === row.home.teamId ? row.home : row.away).abbreviation ??
-                        (row.myTeamId === row.home.teamId ? row.home : row.away).school}
+                      {mySide.abbreviation ?? mySide.school.slice(0, 4)}
                     </span>
                   ) : (
                     <span className="muted">—</span>
                   )}
                 </td>
 
-                <td>
-                  {row.revealed && row.totalPicks > 0 ? (
-                    <div style={{ display: "grid", gap: "0.15rem", fontSize: "0.76rem" }}>
-                      {[row.away, row.home].map((side) => (
-                        <span
-                          key={side.teamId}
-                          className={side.pct >= 50 ? undefined : "muted"}
-                          style={{ fontVariantNumeric: "tabular-nums" }}
-                        >
-                          {side.pct}% {side.abbreviation ?? side.school.slice(0, 4)}
-                        </span>
-                      ))}
-                    </div>
-                  ) : (
-                    <span className="muted" style={{ fontSize: "0.76rem" }}>
-                      at kickoff
-                    </span>
-                  )}
-                </td>
-
                 <td className="num">
                   {row.completed || row.status === "in_progress" ? (
-                    <span style={{ display: "grid", gap: "0.15rem", fontSize: "0.85rem" }}>
+                    <span style={{ display: "grid", gap: "3px", fontSize: "0.85rem" }}>
                       {[row.away, row.home].map((side) => {
                         const won = row.completed && row.winnerTeamId === side.teamId;
                         return (
@@ -207,16 +224,19 @@ function TableView({ rows }: { rows: MatchupRow[] }) {
                             style={{
                               fontVariantNumeric: "tabular-nums",
                               color: won ? "var(--accent)" : "var(--muted)",
-                              fontWeight: won ? 700 : 500,
+                              fontWeight: won ? 750 : 500,
                             }}
                           >
                             {side.score ?? "–"}
                           </strong>
                         );
                       })}
+                      <span className="muted" style={{ fontSize: "0.68rem", fontWeight: 500 }}>
+                        {label}
+                      </span>
                     </span>
                   ) : (
-                    <span className="muted" style={{ fontSize: "0.78rem" }}>
+                    <span className="muted" style={{ fontSize: "0.76rem" }}>
                       <LocalTime iso={row.startTime} mode="time" />
                     </span>
                   )}
@@ -230,24 +250,112 @@ function TableView({ rows }: { rows: MatchupRow[] }) {
   );
 }
 
-// ------------------------------------------------------------------ cards
+// ------------------------------------------------------------------- cards
+
+function TugSide({
+  side,
+  row,
+  home,
+}: {
+  side: MatchupSide;
+  row: MatchupRow;
+  home: boolean;
+}) {
+  const fill = teamFill(side.color);
+  const ink = teamInk(side.color);
+  const won = row.completed && row.winnerTeamId === side.teamId;
+  const lost = row.completed && row.winnerTeamId !== null && !won;
+  const mine = row.myTeamId === side.teamId;
+
+  // Before kickoff the split is genuinely unknown, so the track stays empty
+  // rather than resting at half — a 50/50 fill would read as real data.
+  const showSplit = row.revealed && row.totalPicks > 0;
+
+  return (
+    <div className={`tug-row${home ? " is-home" : ""}`} style={{ opacity: lost ? 0.62 : 1 }}>
+      <div
+        className="tug-badge"
+        style={{
+          background: fill,
+          color: ink,
+          boxShadow: won ? `0 0 0 2px var(--accent)` : mine ? `0 0 0 2px ${fill}` : "none",
+        }}
+      >
+        {side.logo ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={side.logo} alt="" />
+        ) : null}
+        <span className="tug-name">
+          <b>{side.school}</b>
+          <span>
+            {side.rank ? `#${side.rank} · ` : ""}
+            {side.abbreviation ?? (home ? "Home" : "Away")}
+          </span>
+        </span>
+      </div>
+
+      {side.score !== null && (row.completed || row.status === "in_progress") ? (
+        <span
+          className="tug-score"
+          style={{ color: won ? "var(--accent)" : "var(--muted)" }}
+        >
+          {side.score}
+          {won ? " ✓" : ""}
+        </span>
+      ) : null}
+
+      <div className="tug-track">
+        {showSplit ? (
+          <div
+            className="tug-fill"
+            style={{
+              width: `${side.pct}%`,
+              background: `linear-gradient(${home ? "270deg" : "90deg"}, ${teamWash(
+                side.color,
+                0.9,
+              )}, ${teamWash(side.color, 0.42)})`,
+            }}
+          />
+        ) : null}
+      </div>
+
+      {showSplit ? (
+        <span className="tug-pct" style={{ color: fill }}>
+          {side.pct}%
+        </span>
+      ) : null}
+    </div>
+  );
+}
 
 function CardView({ rows, memberCount }: { rows: MatchupRow[]; memberCount: number }) {
   return (
-    <div style={{ display: "grid", gap: "0.6rem" }}>
-      {rows.map((row) => {
+    <div style={{ display: "grid", gap: "0.7rem" }}>
+      {rows.map((row, index) => {
         const label = statusLabel(row);
 
         return (
-          <div key={row.id} className="surface" style={{ padding: "0.8rem 0.9rem" }}>
+          <div
+            key={row.id}
+            className="glass"
+            style={
+              {
+                padding: "0.85rem 0.95rem",
+                // stagger the sweep so the slate shimmers in sequence
+                "--shine-delay": `${(index % 6) * 1.1}s`,
+              } as React.CSSProperties
+            }
+          >
             <div
               style={{
                 display: "flex",
                 alignItems: "center",
                 gap: "0.5rem",
                 marginBottom: "0.6rem",
-                fontSize: "0.76rem",
+                fontSize: "0.75rem",
                 flexWrap: "wrap",
+                position: "relative",
+                zIndex: 1,
               }}
             >
               <span className="muted">
@@ -260,125 +368,25 @@ function CardView({ rows, memberCount }: { rows: MatchupRow[]; memberCount: numb
                   <Badge tone="accent">Live</Badge>
                 </span>
               ) : null}
+              {row.myTeamId ? null : (
+                <span style={{ marginLeft: "auto" }}>
+                  <Badge tone="muted">No pick</Badge>
+                </span>
+              )}
             </div>
 
-            <div style={{ display: "grid", gap: "0.4rem" }}>
-              {[row.away, row.home].map((side, index) => {
-                const won = row.completed && row.winnerTeamId === side.teamId;
-                const lost = row.completed && row.winnerTeamId !== null && !won;
-                const mine = row.myTeamId === side.teamId;
-
-                return (
-                  <div
-                    key={side.teamId}
-                    style={{
-                      position: "relative",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "0.5rem",
-                      padding: "0.5rem 0.6rem",
-                      borderRadius: 9,
-                      overflow: "hidden",
-                      border: `1.5px solid ${
-                        won ? "var(--accent)" : mine ? "var(--border)" : "transparent"
-                      }`,
-                      background: won ? "var(--accent-soft)" : "transparent",
-                      color: lost ? "var(--muted)" : "var(--text)",
-                    }}
-                  >
-                    {row.revealed && row.totalPicks > 0 && !won ? (
-                      <span
-                        aria-hidden
-                        style={{
-                          position: "absolute",
-                          top: 0,
-                          bottom: 0,
-                          left: 0,
-                          width: `${side.pct}%`,
-                          background: "var(--border)",
-                          opacity: 0.45,
-                        }}
-                      />
-                    ) : null}
-
-                    <span
-                      style={{
-                        position: "relative",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "0.4rem",
-                        minWidth: 0,
-                      }}
-                    >
-                      {index === 1 ? (
-                        <span className="muted" style={{ fontSize: "0.7rem", flexShrink: 0 }}>
-                          @
-                        </span>
-                      ) : null}
-                      <TeamChip
-                        team={{
-                          school: side.school,
-                          display_name: side.school,
-                          abbreviation: side.abbreviation,
-                          logo: side.logo,
-                        }}
-                        rank={side.rank}
-                        size={20}
-                      />
-                      {mine ? <Badge tone="accent">Your pick</Badge> : null}
-                    </span>
-
-                    <span
-                      style={{
-                        position: "relative",
-                        marginLeft: "auto",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "0.6rem",
-                        flexShrink: 0,
-                      }}
-                    >
-                      {row.revealed && row.totalPicks > 0 ? (
-                        <span
-                          className={won ? undefined : "muted"}
-                          style={{
-                            fontSize: "0.78rem",
-                            fontVariantNumeric: "tabular-nums",
-                            fontWeight: 600,
-                            color: won ? "var(--accent)" : undefined,
-                          }}
-                        >
-                          {side.pct}%<span style={{ fontWeight: 400 }}> ({side.count})</span>
-                        </span>
-                      ) : null}
-
-                      {side.score !== null &&
-                      (row.completed || row.status === "in_progress") ? (
-                        <strong
-                          style={{
-                            fontVariantNumeric: "tabular-nums",
-                            fontSize: "1rem",
-                            color: won ? "var(--accent)" : undefined,
-                          }}
-                        >
-                          {side.score}
-                        </strong>
-                      ) : null}
-
-                      {won ? <span style={{ color: "var(--accent)" }}>✓</span> : null}
-                    </span>
-                  </div>
-                );
-              })}
+            <div className="tug">
+              <TugSide side={row.away} row={row} home={false} />
+              <TugSide side={row.home} row={row} home />
             </div>
 
             {!row.revealed ? (
-              <p className="note" style={{ margin: "0.5rem 0 0", fontSize: "0.75rem" }}>
-                Kicks off <LocalTime iso={row.startTime} mode="time" /> ·{" "}
-                {row.myTeamId ? "league picks reveal then" : "you have no pick on this one"}
+              <p className="note" style={{ position: "relative", zIndex: 1, fontSize: "0.73rem" }}>
+                Kicks off <LocalTime iso={row.startTime} mode="time" /> · league split reveals
+                then
               </p>
             ) : row.totalPicks < memberCount ? (
-              <p className="note" style={{ margin: "0.5rem 0 0", fontSize: "0.75rem" }}>
+              <p className="note" style={{ position: "relative", zIndex: 1, fontSize: "0.73rem" }}>
                 {memberCount - row.totalPicks} of {memberCount}{" "}
                 {memberCount - row.totalPicks === 1 ? "member" : "members"} had no pick here.
               </p>
