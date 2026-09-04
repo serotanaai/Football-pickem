@@ -2,6 +2,11 @@
 
 import { useActionState } from "react";
 import {
+  MAX_GAMES_PER_WEEK,
+  MIN_GAMES_PER_WEEK,
+  scopePicksItsOwnSize,
+} from "@/lib/format";
+import {
   seedPlayoffsAction,
   updateLeagueAction,
   type ActionState,
@@ -23,6 +28,7 @@ export function LeagueSettingsForm({
   name,
   description,
   maxGames,
+  scope,
   endWeek,
   playoffTeams,
 }: {
@@ -31,6 +37,7 @@ export function LeagueSettingsForm({
   name: string;
   description: string | null;
   maxGames: number;
+  scope: string;
   endWeek: number;
   playoffTeams: number;
 }) {
@@ -57,17 +64,21 @@ export function LeagueSettingsForm({
           gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
         }}
       >
-        <div>
-          <label htmlFor="league-max-games">Games per week</label>
-          <input
-            id="league-max-games"
-            name="max_games_per_week"
-            type="number"
-            min={3}
-            max={60}
-            defaultValue={maxGames}
-          />
-        </div>
+        {scopePicksItsOwnSize(scope) ? (
+          <div>
+            <label htmlFor="league-max-games">Games per week</label>
+            <input
+              id="league-max-games"
+              name="max_games_per_week"
+              type="number"
+              min={MIN_GAMES_PER_WEEK}
+              max={MAX_GAMES_PER_WEEK}
+              defaultValue={maxGames}
+            />
+          </div>
+        ) : (
+          <input type="hidden" name="max_games_per_week" value={maxGames} />
+        )}
         <div>
           <label htmlFor="league-end-week">Last regular-season week</label>
           <input

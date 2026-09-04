@@ -82,3 +82,19 @@ export function totalPlayoffRounds(playoffTeams: number): number {
   if (playoffTeams === 2) return 1;
   return 0;
 }
+
+/**
+ * How many games an all-FBS league puts on a week.
+ *
+ * Only all-FBS has a choice to make: a conference league follows its whole
+ * conference and a top-25 league every ranked game, so for those the slate is
+ * whatever qualifies. Mirrors the check constraint on leagues.
+ */
+export const MIN_GAMES_PER_WEEK = 5;
+export const MAX_GAMES_PER_WEEK = 15;
+export const DEFAULT_GAMES_PER_WEEK = 10;
+
+/** Only all-FBS leagues choose a size; the others take everything that fits. */
+export function scopePicksItsOwnSize(scope: string): boolean {
+  return scope === "all_fbs";
+}
