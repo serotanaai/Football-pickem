@@ -3,7 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import { loadLeague, weekRange } from "@/lib/league";
 import { loadMembers } from "@/lib/board";
 import { siteUrl } from "@/lib/env";
-import { formatKickoff, scopeLabel } from "@/lib/format";
+import { scopeLabel } from "@/lib/format";
+import { LocalTime } from "@/components/LocalTime";
 import { leaveLeagueAction } from "../actions";
 import { InviteLink } from "./InviteLink";
 import { LeagueSettingsForm, SeedPlayoffsForm } from "./CommissionerForms";
@@ -156,7 +157,7 @@ export default async function SettingsPage({
                       ) : null}
                     </td>
                     <td className={row?.lock_at ? undefined : "muted"}>
-                      {row?.lock_at ? formatKickoff(row.lock_at) : "Not built yet"}
+                      {row?.lock_at ? <LocalTime iso={row.lock_at} /> : "Not built yet"}
                     </td>
                     <td
                       className="muted"

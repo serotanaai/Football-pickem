@@ -4,7 +4,8 @@ import Link from "next/link";
 import { ensureWeekBoard, isLocked, loadSubmission } from "@/lib/board";
 import { createClient } from "@/lib/supabase/server";
 import { loadLeague, parseWeek, resolveCurrentWeek, weekRange } from "@/lib/league";
-import { formatKickoff, POINTS_PER_PICK, scopeLabel } from "@/lib/format";
+import { POINTS_PER_PICK, scopeLabel } from "@/lib/format";
+import { LocalTime } from "@/components/LocalTime";
 import { WeekPicker } from "../WeekPicker";
 import { PickBoard, type PickGame } from "./PickBoard";
 
@@ -89,7 +90,7 @@ export default async function PicksPage({
           </div>
           {leagueWeek?.lock_at ? (
             <p className="muted" style={{ margin: "0.3rem 0 0", fontSize: "0.85rem" }}>
-              First kickoff {formatKickoff(leagueWeek.lock_at)}. Every game locks at its own
+              First kickoff <LocalTime iso={leagueWeek.lock_at} showZone />. Every game locks at its own
               kickoff, and each correct pick is worth {POINTS_PER_PICK} points.
             </p>
           ) : null}
@@ -115,7 +116,7 @@ export default async function PicksPage({
           <p className="muted" style={{ margin: "0 0 1.25rem", fontSize: "0.9rem" }}>
             You submitted {submission.pick_count}{" "}
             {submission.pick_count === 1 ? "pick" : "picks"} on{" "}
-            {formatKickoff(submission.submitted_at)}. Picks are final once submitted, so there is
+            <LocalTime iso={submission.submitted_at} />. Picks are final once submitted, so there is
             nothing left to change this week.
           </p>
           <Link className="btn btn-primary" href={`/leagues/${slug}`}>
