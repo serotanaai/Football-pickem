@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Reveal } from "@/components/Reveal";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 
@@ -59,7 +60,7 @@ export default async function HomePage() {
         leaderboards all season, then a bracket to close it out.
       </p>
 
-      <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", marginBottom: "3.5rem" }}>
+      <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", marginBottom: "2rem" }}>
         <Link className="btn btn-primary" href="/login">
           Create your league
         </Link>
@@ -68,6 +69,52 @@ export default async function HomePage() {
         </Link>
       </div>
 
+      {/* The bar the whole app is built around, so the pitch shows the product
+          rather than describing it. Decorative: the copy above already says it. */}
+      <Reveal delay={80}>
+        <div
+          className="glass"
+          aria-hidden
+          style={{ padding: "0.85rem 0.9rem", marginBottom: "3.5rem" }}
+        >
+          <div
+            className="matchup-meta"
+            style={{ marginBottom: "0.55rem" }}
+          >
+            <span className="muted">Sat, 3:30 PM · ABC</span>
+            <span style={{ marginLeft: "auto" }} className="muted">
+              12 of 12 picked
+            </span>
+          </div>
+          <div className="tug is-split">
+            <div
+              className="tug-side"
+              style={{ width: "63%", background: "#bb0000", ["--ink" as string]: "#ffffff" }}
+            >
+              <span className="tug-label">
+                <b>
+                  <span className="tug-rank">#1</span>
+                  <span className="tug-name">Ohio State</span>
+                </b>
+                <span className="tug-pct">63%</span>
+              </span>
+            </div>
+            <div
+              className="tug-side is-home"
+              style={{ width: "37%", background: "#0021a5", ["--ink" as string]: "#ffffff" }}
+            >
+              <span className="tug-label">
+                <b>
+                  <span className="tug-rank">#9</span>
+                  <span className="tug-name">Florida</span>
+                </b>
+                <span className="tug-pct">37%</span>
+              </span>
+            </div>
+          </div>
+        </div>
+      </Reveal>
+
       <div
         style={{
           display: "grid",
@@ -75,13 +122,18 @@ export default async function HomePage() {
           gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
         }}
       >
-        {FEATURES.map((feature) => (
-          <div key={feature.title} className="surface" style={{ padding: "1.1rem 1.2rem" }}>
-            <h2 style={{ fontSize: "0.98rem", margin: "0 0 0.4rem" }}>{feature.title}</h2>
-            <p className="muted" style={{ margin: 0, fontSize: "0.9rem", lineHeight: 1.55 }}>
-              {feature.body}
-            </p>
-          </div>
+        {FEATURES.map((feature, index) => (
+          <Reveal key={feature.title} delay={index * 70}>
+            <div
+              className="surface surface-hover"
+              style={{ padding: "1.1rem 1.2rem", height: "100%" }}
+            >
+              <h2 style={{ fontSize: "0.98rem", margin: "0 0 0.4rem" }}>{feature.title}</h2>
+              <p className="muted" style={{ margin: 0, fontSize: "0.9rem", lineHeight: 1.55 }}>
+                {feature.body}
+              </p>
+            </div>
+          </Reveal>
         ))}
       </div>
     </div>

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { StickyHeader } from "./StickyHeader";
 
 export function AppShell({
   email,
@@ -9,45 +10,25 @@ export function AppShell({
 }) {
   return (
     <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
-      <header
-        style={{
-          borderBottom: "1px solid var(--border)",
-          background: "var(--surface)",
-          position: "sticky",
-          top: 0,
-          zIndex: 10,
-        }}
-      >
-        <div
-          style={{
-            maxWidth: 1080,
-            margin: "0 auto",
-            padding: "0.85rem 1.25rem",
-            display: "flex",
-            alignItems: "center",
-            gap: "1rem",
-          }}
-        >
-          <Link
-            href="/dashboard"
-            style={{ fontWeight: 750, textDecoration: "none", letterSpacing: "-0.01em" }}
-          >
+      <StickyHeader>
+        <div className="app-header-inner">
+          <Link href="/dashboard" className="brand">
             🏈 PickemWeekly
           </Link>
-          <nav style={{ display: "flex", gap: "0.85rem", fontSize: "0.9rem" }}>
-            <Link href="/dashboard" style={{ textDecoration: "none" }}>
+          <nav className="app-header-nav" style={{ display: "flex", gap: "0.2rem", fontSize: "0.9rem" }}>
+            <Link href="/dashboard" className="nav-link">
               My leagues
             </Link>
-            <Link href="/leagues/new" style={{ textDecoration: "none" }}>
+            <Link href="/leagues/new" className="nav-link">
               New league
             </Link>
-            <Link href="/join" style={{ textDecoration: "none" }}>
+            <Link href="/join" className="nav-link">
               Join
             </Link>
           </nav>
-          <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "0.75rem" }}>
+          <div className="app-header-actions">
             {email ? (
-              <span className="muted" style={{ fontSize: "0.82rem" }}>
+              <span className="muted app-header-email" style={{ fontSize: "0.82rem" }}>
                 {email}
               </span>
             ) : null}
@@ -58,7 +39,7 @@ export function AppShell({
             </form>
           </div>
         </div>
-      </header>
+      </StickyHeader>
 
       <main style={{ maxWidth: 1080, margin: "0 auto", padding: "1.75rem 1.25rem 4rem", width: "100%" }}>
         {children}
