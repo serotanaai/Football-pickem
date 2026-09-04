@@ -3,6 +3,12 @@
 import { useActionState, useState } from "react";
 import { createLeagueAction, type CreateLeagueState } from "./actions";
 import type { LeagueScope } from "@/lib/database.types";
+import {
+  DEFAULT_GAMES_PER_WEEK,
+  MAX_GAMES_PER_WEEK,
+  MIN_GAMES_PER_WEEK,
+  scopePicksItsOwnSize,
+} from "@/lib/format";
 
 type Conference = { id: number; name: string; short_name: string | null };
 
@@ -109,20 +115,39 @@ Your league follows one slate for the whole season. You can still change it up u
           </div>
         ) : null}
 
-        <div style={{ marginTop: "1rem" }}>
-          <label htmlFor="max_games_per_week">Games per week</label>
-          <input
-            id="max_games_per_week"
-            name="max_games_per_week"
-            type="number"
-            min={3}
-            max={60}
-            defaultValue={12}
-          />
-          <p className="muted" style={{ fontSize: "0.8rem", margin: "0.35rem 0 0" }}>
-            When more games qualify than this, ranked matchups are taken first.
-          </p>
-        </div>
+        {/*
+          Only all-FBS has a slate to size. A conference league follows its
+          whole conference and a top-25 league every ranked game, so offering a
+          number there would just be a way to lose matchups the league exists
+          to follow.
+        */}
+        {scopePicksItsOwnSize(scope) ? (
+          <div style={{ marginTop: "1rem" }}>
+            <label htmlFor="max_games_per_week">Games per week</label>
+            <input
+              id="max_games_per_week"
+              name="max_games_per_week"
+              type="number"
+              min={MIN_GAMES_PER_WEEK}
+              max={MAX_GAMES_PER_WEEK}
+              defaultValue={DEFAULT_GAMES_PER_WEEK}
+            />
+            <p className="muted" style={{ fontSize: "0.8rem", margin: "0.35rem 0 0" }}>
+              Between {MIN_GAMES_PER_WEEK} and {MAX_GAMES_PER_WEEK}. Every league gets its own
+              shuffle of the week&apos;s FBS games, and the board leans toward teams you have not
+              seen yet this season.
+            </p>
+          </div>
+        ) : (
+          <>
+            <input type="hidden" name="max_games_per_week" value={DEFAULT_GAMES_PER_WEEK} />
+            <p className="muted" style={{ fontSize: "0.8rem", margin: "1rem 0 0" }}>
+              {scope === "conference"
+                ? "Every game your conference plays that week is on the board — no size to pick."
+                : "Every game with a ranked team is on the board, whoever they play — no size to pick."}
+            </p>
+          </>
+        )}
       </div>
 
       <div className="surface" style={{ padding: "1.25rem" }}>

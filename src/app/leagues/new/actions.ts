@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import type { LeagueScope } from "@/lib/database.types";
+import { DEFAULT_GAMES_PER_WEEK } from "@/lib/format";
 
 const SCOPES: LeagueScope[] = ["conference", "all_fbs", "top25"];
 
@@ -40,7 +41,7 @@ export async function createLeagueAction(
     p_season: intField(formData, "season", new Date().getFullYear()),
     p_scope: scope,
     p_conference_id: scope === "conference" ? conferenceId : null,
-    p_max_games: intField(formData, "max_games_per_week", 12),
+    p_max_games: intField(formData, "max_games_per_week", DEFAULT_GAMES_PER_WEEK),
     p_start_week: startWeek,
     p_end_week: endWeek,
     p_playoff_teams: intField(formData, "playoff_teams", 4),

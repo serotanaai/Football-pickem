@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { requireUser } from "@/lib/league";
+import { MAX_GAMES_PER_WEEK, MIN_GAMES_PER_WEEK } from "@/lib/format";
 
 export type ActionState = { error?: string; ok?: string };
 
@@ -114,8 +115,14 @@ export async function updateLeagueAction(
   const playoffTeams = Number(formData.get("playoff_teams"));
 
   if (name.length < 3) return { error: "League names need at least 3 characters." };
-  if (!Number.isInteger(maxGames) || maxGames < 3 || maxGames > 60) {
-    return { error: "Games per week has to be between 3 and 60." };
+  if (
+    !Number.isInteger(maxGames) ||
+    maxGames < MIN_GAMES_PER_WEEK ||
+    maxGames > MAX_GAMES_PER_WEEK
+  ) {
+    return {
+      error: `Games per week has to be between ${MIN_GAMES_PER_WEEK} and ${MAX_GAMES_PER_WEEK}.`,
+    };
   }
   if (![0, 2, 4, 8].includes(playoffTeams)) {
     return { error: "Playoff field must be 0, 2, 4 or 8." };
