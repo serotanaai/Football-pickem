@@ -162,12 +162,25 @@ function GameRow({
       ? (game.status_detail ?? "In progress")
       : formatTime(game.start_time);
 
+  // What this game did to your week, once it is out of reach.
+  const outcome = !game.locked
+    ? null
+    : picked === undefined
+      ? { label: "Missed — no pick", tone: "muted" as const }
+      : !game.completed
+        ? { label: "Pick locked in", tone: "muted" as const }
+        : game.winner_team_id === null
+          ? { label: "No result", tone: "muted" as const }
+          : game.winner_team_id === picked
+            ? { label: `+${POINTS_PER_PICK}`, tone: "accent" as const }
+            : { label: "0", tone: "muted" as const };
+
   return (
     <div
       className="surface"
       style={{
         padding: "0.75rem 0.9rem",
-        opacity: game.locked && !picked ? 0.72 : 1,
+        opacity: game.locked ? 0.7 : 1,
       }}
     >
       <div
@@ -184,8 +197,13 @@ function GameRow({
         {game.broadcast ? <span className="muted">· {game.broadcast}</span> : null}
         {game.odds_details ? <span className="muted">· {game.odds_details}</span> : null}
         {game.locked ? (
-          <span style={{ marginLeft: "auto" }}>
-            <Badge tone="muted">{game.completed ? "Final" : "Locked"}</Badge>
+          <span
+            style={{ marginLeft: "auto", display: "flex", gap: "0.35rem", alignItems: "center" }}
+          >
+            {outcome ? <Badge tone={outcome.tone}>{outcome.label}</Badge> : null}
+            <Badge tone="muted">
+              {game.completed ? "Final" : game.status === "in_progress" ? "In progress" : "Locked"}
+            </Badge>
           </span>
         ) : null}
       </div>
@@ -232,8 +250,16 @@ function GameRow({
                 <TeamChip team={team} rank={rank} />
               </span>
               <span style={{ display: "flex", alignItems: "center", gap: "0.4rem", flexShrink: 0 }}>
-                {score !== null ? (
-                  <strong style={{ fontVariantNumeric: "tabular-nums" }}>{score}</strong>
+                {score !== null && (game.completed || game.status === "in_progress") ? (
+                  <strong
+                    style={{
+                      fontVariantNumeric: "tabular-nums",
+                      fontSize: "0.95rem",
+                      color: won ? "var(--accent)" : "inherit",
+                    }}
+                  >
+                    {score}
+                  </strong>
                 ) : null}
                 {won ? <span title="Winner">✓</span> : null}
               </span>
