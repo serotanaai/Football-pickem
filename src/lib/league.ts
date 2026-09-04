@@ -111,6 +111,15 @@ export function parseWeek(
 export const MAX_LEAGUES_PER_SEASON = 3;
 
 /**
+ * Members one league may hold, mirroring the league_members trigger.
+ *
+ * The ceiling is the scoring, not the database: a ten-game week has eleven
+ * possible scores, so past a couple of dozen people the top score is shared
+ * every week and the tiebreak — who submitted earliest — decides the season.
+ */
+export const MAX_LEAGUE_MEMBERS = 24;
+
+/**
  * How many leagues the signed-in user is already in for a season.
  *
  * The cap itself is enforced by a trigger on league_members. This exists only

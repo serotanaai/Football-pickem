@@ -1,6 +1,6 @@
 import { Badge } from "@/components/Badge";
 import { createClient } from "@/lib/supabase/server";
-import { loadLeague, weekRange } from "@/lib/league";
+import { loadLeague, MAX_LEAGUE_MEMBERS, weekRange } from "@/lib/league";
 import { loadMembers } from "@/lib/board";
 import { siteUrl } from "@/lib/env";
 import { scopeLabel } from "@/lib/format";
@@ -72,12 +72,19 @@ export default async function SettingsPage({
             url={inviteUrl}
             isCommissioner={isCommissioner}
           />
+          <p className="note">
+            {members.length >= MAX_LEAGUE_MEMBERS
+              ? `This league is full at ${MAX_LEAGUE_MEMBERS} members — the link will turn anyone else away.`
+              : `Room for ${MAX_LEAGUE_MEMBERS - members.length} more ${
+                  MAX_LEAGUE_MEMBERS - members.length === 1 ? "member" : "members"
+                }. Leagues cap at ${MAX_LEAGUE_MEMBERS}.`}
+          </p>
         </div>
       </section>
 
       <section>
         <h2 style={{ fontSize: "1rem", margin: "0 0 0.6rem" }}>
-          Members ({members.length})
+          Members ({members.length} of {MAX_LEAGUE_MEMBERS})
         </h2>
         <div className="surface" style={{ overflow: "hidden" }}>
           <table>
