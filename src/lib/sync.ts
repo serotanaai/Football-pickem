@@ -2,8 +2,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import {
   FBS_CONFERENCES,
   fetchCurrentWeek,
-  fetchFbsTeams,
   fetchRankings,
+  fetchTeamsForWeeks,
   fetchWeekGames,
   type NormalizedTeam,
 } from "@/lib/espn";
@@ -33,8 +33,16 @@ export async function syncConferences(db: Supabase) {
   return FBS_CONFERENCES.length;
 }
 
-export async function syncTeams(db: Supabase) {
-  const teams = await fetchFbsTeams();
+/** Walks a season's scoreboards to build the team table. */
+export async function syncTeams(db: Supabase, season: number, weeks?: number[]) {
+  const range = weeks ?? Array.from({ length: 15 }, (_, i) => i + 1);
+  const teams = await fetchTeamsForWeeks(season, range);
+  if (teams.length === 0) return 0;
+
+  return upsertTeams(db, teams);
+}
+
+async function upsertTeams(db: Supabase, teams: NormalizedTeam[]) {
   if (teams.length === 0) return 0;
 
   const { error } = await db.from("teams").upsert(
@@ -44,30 +52,9 @@ export async function syncTeams(db: Supabase) {
   return teams.length;
 }
 
-/**
- * Adds teams seen on the scoreboard that we do not have yet — FCS opponents,
- * mostly. Never touches rows we already hold, so a team's FBS conference
- * assignment from syncTeams survives.
- */
-async function insertUnknownTeams(db: Supabase, teams: NormalizedTeam[]) {
-  if (teams.length === 0) return 0;
-
-  const ids = teams.map((t) => t.id);
-  const { data: existing, error } = await db.from("teams").select("id").in("id", ids);
-  if (error) throw new Error(`teams lookup: ${error.message}`);
-
-  const known = new Set((existing ?? []).map((row) => row.id));
-  const missing = teams.filter((t) => !known.has(t.id));
-  if (missing.length === 0) return 0;
-
-  const { error: insertError } = await db.from("teams").insert(missing);
-  if (insertError) throw new Error(`unknown teams: ${insertError.message}`);
-  return missing.length;
-}
-
 export async function syncWeek(db: Supabase, season: number, week: number) {
   const { games, teams } = await fetchWeekGames(season, week);
-  const addedTeams = await insertUnknownTeams(db, teams);
+  const syncedTeams = await upsertTeams(db, teams);
 
   if (games.length > 0) {
     const { error } = await db.from("games").upsert(
@@ -91,7 +78,7 @@ export async function syncWeek(db: Supabase, season: number, week: number) {
     // Game-level curatedRank already covers the top-25 slates, so this is optional.
   }
 
-  return { games: games.length, addedTeams, rankings: rankingsSynced };
+  return { games: games.length, teams: syncedTeams, rankings: rankingsSynced };
 }
 
 /**

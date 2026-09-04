@@ -31,13 +31,13 @@ export async function GET(request: Request) {
       .select("id", { count: "exact", head: true })
       .eq("is_fbs", true);
 
+    const { season, weeks } = await resolveWindow(new URL(request.url));
+
     let teams = 0;
     if (!count) {
       await syncConferences(db);
-      teams = await syncTeams(db);
+      teams = await syncTeams(db, season);
     }
-
-    const { season, weeks } = await resolveWindow(new URL(request.url));
     const results: Record<string, unknown> = {};
     for (const week of weeks) {
       results[`week_${week}`] = await syncWeek(db, season, week);

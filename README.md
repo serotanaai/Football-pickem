@@ -156,13 +156,20 @@ that is not in the game, or on a game that is not on that league's slate for the
 
 All public, no key required. Group `80` is FBS; each conference is a child group.
 
+Host matters. `site.api.espn.com` sits behind an Akamai rule that returns **403 to
+datacenter IPs** — confirmed by calling it from Supabase, and it would have hit Vercel the
+same way. `site.web.api.espn.com` serves the identical paths and payloads with no such block,
+so that is what the adapter uses.
+
 ```
-/teams?groups=<conference id>          team list for one conference
-/scoreboard?groups=80&dates=<season>&seasontype=2&week=<n>
+/scoreboard?groups=80&dates=<season>&seasontype=2&week=<n>&limit=400
 /rankings?year=<season>&week=<n>&seasontype=2
 ```
 
-Conference group ids are in `src/lib/espn.ts` and `supabase/migrations/0005`.
+The scoreboard carries `conferenceId` on every team, so conference membership and FBS status
+come free with the games — which is just as well, because `/teams` ignores its `groups`
+filter on this host and will happily return Division III schools. Conference group ids are in
+`src/lib/espn.ts` and `supabase/migrations/0005`.
 
 ---
 

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { syncConferences, syncSecretMatches, syncTeams } from "@/lib/sync";
+import { resolveWindow, syncConferences, syncSecretMatches, syncTeams } from "@/lib/sync";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -12,9 +12,10 @@ export async function POST(request: Request) {
 
   try {
     const db = createAdminClient();
+    const { season } = await resolveWindow(new URL(request.url));
     const conferences = await syncConferences(db);
-    const teams = await syncTeams(db);
-    return NextResponse.json({ ok: true, conferences, teams });
+    const teams = await syncTeams(db, season);
+    return NextResponse.json({ ok: true, season, conferences, teams });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Sync failed";
     return NextResponse.json({ ok: false, error: message }, { status: 502 });

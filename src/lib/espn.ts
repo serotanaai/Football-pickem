@@ -8,7 +8,10 @@
 
 import type { GameState } from "@/lib/database.types";
 
-const BASE = "https://site.api.espn.com/apis/site/v2/sports/football/college-football";
+// site.api.espn.com is fronted by an Akamai rule that returns 403 to datacenter
+// IPs — verified from Supabase, and it would have hit Vercel too. site.web.api
+// serves the identical paths and payloads without that block.
+const BASE = "https://site.web.api.espn.com/apis/site/v2/sports/football/college-football";
 
 export const FBS_GROUP = 80;
 
@@ -44,6 +47,7 @@ type EspnLogo = { href?: string };
 
 type EspnTeam = {
   id?: string;
+  conferenceId?: string;
   slug?: string;
   location?: string;
   name?: string;
@@ -164,13 +168,16 @@ function hex(value: string | undefined): string | null {
   return /^[0-9a-fA-F]{6}$/.test(trimmed) ? `#${trimmed.toLowerCase()}` : null;
 }
 
-function normalizeTeam(
-  team: EspnTeam,
-  conferenceId: number | null,
-  isFbs: boolean,
-): NormalizedTeam | null {
+const FBS_CONFERENCE_IDS = new Set(FBS_CONFERENCES.map((c) => c.id));
+
+function normalizeTeam(team: EspnTeam): NormalizedTeam | null {
   const id = Number(team.id);
   if (!Number.isFinite(id)) return null;
+
+  // conferenceId covers every division, so FBS membership is just set lookup.
+  const conference = Number(team.conferenceId);
+  const isFbs = Number.isFinite(conference) && FBS_CONFERENCE_IDS.has(conference);
+  const conferenceId = isFbs ? conference : null;
 
   const school = team.location ?? team.displayName ?? team.name ?? `Team ${id}`;
   const mascot = team.name ?? team.nickname ?? null;
@@ -190,20 +197,22 @@ function normalizeTeam(
   };
 }
 
-/** Every FBS team, tagged with the conference group it was listed under. */
-export async function fetchFbsTeams(): Promise<NormalizedTeam[]> {
+/**
+ * Every team seen across a range of weeks, conference and division included.
+ *
+ * The /teams endpoint ignores its `groups` filter on this host and returns all
+ * divisions, so the scoreboard is the reliable source — and it already carries
+ * conferenceId on each team.
+ */
+export async function fetchTeamsForWeeks(
+  season: number,
+  weeks: number[],
+): Promise<NormalizedTeam[]> {
   const byId = new Map<number, NormalizedTeam>();
 
-  for (const conference of FBS_CONFERENCES) {
-    const data = await getJson<EspnTeamsResponse>(
-      `${BASE}/teams?groups=${conference.id}&limit=200`,
-    );
-    const entries = data.sports?.[0]?.leagues?.[0]?.teams ?? [];
-    for (const entry of entries) {
-      if (!entry.team) continue;
-      const team = normalizeTeam(entry.team, conference.id, true);
-      if (team) byId.set(team.id, team);
-    }
+  for (const week of weeks) {
+    const { teams } = await fetchWeekGames(season, week);
+    for (const team of teams) byId.set(team.id, team);
   }
 
   return [...byId.values()];
@@ -235,8 +244,8 @@ function score(competitor: EspnCompetitor): number | null {
 }
 
 /**
- * Games plus every team referenced by them. Non-FBS opponents come back flagged
- * `is_fbs: false` so the foreign key holds while the pick slates stay FBS-only.
+ * Games plus every team referenced by them, each already tagged with its
+ * conference and whether it is FBS.
  */
 export async function fetchWeekGames(
   season: number,
@@ -265,8 +274,8 @@ export async function fetchWeekGames(
     if (!Number.isFinite(homeId) || !Number.isFinite(awayId)) continue;
 
     for (const competitor of [home, away]) {
-      const team = normalizeTeam(competitor.team!, null, false);
-      if (team && !teams.has(team.id)) teams.set(team.id, team);
+      const team = normalizeTeam(competitor.team!);
+      if (team) teams.set(team.id, team);
     }
 
     const { status, completed } = mapStatus(competition.status ?? event.status);
