@@ -1,4 +1,4 @@
-# Hail Mary — College Football Pick'em
+# PickemWeekly — College Football Pick'em
 
 A web app for running a weekly college football pick'em league with friends. Pick a slate
 each week — one conference, all of FBS, or only games with a ranked team — and the app

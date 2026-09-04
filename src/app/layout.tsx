@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Hail Mary — College Football Pick'em",
+  title: "PickemWeekly — College Football Pick'em",
   description:
     "Run a weekly college football pick'em league with your friends: conference, all-FBS or top-25 slates, weekly winners and a fantasy-style playoff bracket.",
 };

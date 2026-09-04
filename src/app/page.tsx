@@ -39,7 +39,7 @@ export default async function HomePage() {
   return (
     <div style={{ maxWidth: 940, margin: "0 auto", padding: "4rem 1.25rem 5rem" }}>
       <p style={{ fontWeight: 750, letterSpacing: "-0.01em", marginBottom: "2.5rem" }}>
-        🏈 Hail Mary
+        🏈 PickemWeekly
       </p>
 
       <h1

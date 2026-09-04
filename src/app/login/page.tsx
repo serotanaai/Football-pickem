@@ -28,7 +28,7 @@ export default async function LoginPage({
     >
       <div style={{ display: "grid", gap: "1.25rem", justifyItems: "center", width: "100%" }}>
         <Link href="/" style={{ textDecoration: "none", fontWeight: 750, fontSize: "1.15rem" }}>
-          🏈 Hail Mary
+          🏈 PickemWeekly
         </Link>
         <p className="muted" style={{ margin: 0, textAlign: "center", maxWidth: 380 }}>
           Weekly college football pick&apos;em with your friends — conference slates, all of

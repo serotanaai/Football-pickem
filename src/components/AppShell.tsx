@@ -32,7 +32,7 @@ export function AppShell({
             href="/dashboard"
             style={{ fontWeight: 750, textDecoration: "none", letterSpacing: "-0.01em" }}
           >
-            🏈 Hail Mary
+            🏈 PickemWeekly
           </Link>
           <nav style={{ display: "flex", gap: "0.85rem", fontSize: "0.9rem" }}>
             <Link href="/dashboard" style={{ textDecoration: "none" }}>
