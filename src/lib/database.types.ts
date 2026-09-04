@@ -366,6 +366,10 @@ export interface Database {
         Returns: number;
       };
       seed_playoffs: { Args: { p_league_id: string }; Returns: number };
+      week_consensus: {
+        Args: { p_league_id: string; p_week: number };
+        Returns: { game_id: number; team_id: number; picks: number }[];
+      };
       submit_week_picks: {
         Args: {
           p_league_id: string;

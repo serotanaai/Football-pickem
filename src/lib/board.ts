@@ -145,7 +145,7 @@ export async function loadSubmission(
 }
 
 export type GameConsensus = {
-  /** null until the game kicks off — RLS hides other members' picks before then. */
+  /** true once you have submitted this week, or the game has kicked off */
   revealed: boolean;
   total: number;
   homeCount: number;
@@ -156,9 +156,11 @@ export type GameConsensus = {
 };
 
 /**
- * How the league split on each game. Only meaningful once a game has started:
- * before kickoff the picks policy returns nothing but your own, so a percentage
- * would just say 100% you.
+ * How the league split on each game.
+ *
+ * The counts come from week_consensus, which returns aggregates only — never
+ * who picked what — and opens up once you have submitted rather than waiting
+ * for kickoff. Your own pick still comes from the picks table directly.
  */
 export async function loadWeekConsensus(
   leagueId: string,
@@ -167,31 +169,34 @@ export async function loadWeekConsensus(
   games: BoardGame[],
 ): Promise<Map<number, GameConsensus>> {
   const supabase = await createClient();
-  const { data: picks } = await supabase
-    .from("picks")
-    .select("game_id, team_id, user_id")
-    .eq("league_id", leagueId)
-    .eq("week", week);
 
+  const [{ data: counts }, { data: mine }] = await Promise.all([
+    supabase.rpc("week_consensus", { p_league_id: leagueId, p_week: week }),
+    supabase
+      .from("picks")
+      .select("game_id, team_id")
+      .eq("league_id", leagueId)
+      .eq("user_id", userId)
+      .eq("week", week),
+  ]);
+
+  const myByGame = new Map((mine ?? []).map((p) => [p.game_id, p.team_id]));
   const out = new Map<number, GameConsensus>();
 
   for (const game of games) {
-    const forGame = (picks ?? []).filter((p) => p.game_id === game.id);
-    const mine = forGame.find((p) => p.user_id === userId);
-    const revealed = isLocked(game);
-    const counted = revealed ? forGame : [];
-    const homeCount = counted.filter((p) => p.team_id === game.home_team_id).length;
-    const awayCount = counted.filter((p) => p.team_id === game.away_team_id).length;
+    const forGame = (counts ?? []).filter((c) => c.game_id === game.id);
+    const homeCount = forGame.find((c) => c.team_id === game.home_team_id)?.picks ?? 0;
+    const awayCount = forGame.find((c) => c.team_id === game.away_team_id)?.picks ?? 0;
     const total = homeCount + awayCount;
 
     out.set(game.id, {
-      revealed,
+      revealed: total > 0,
       total,
       homeCount,
       awayCount,
       homePct: total ? Math.round((homeCount / total) * 100) : 0,
       awayPct: total ? Math.round((awayCount / total) * 100) : 0,
-      myTeamId: mine?.team_id ?? null,
+      myTeamId: myByGame.get(game.id) ?? null,
     });
   }
 

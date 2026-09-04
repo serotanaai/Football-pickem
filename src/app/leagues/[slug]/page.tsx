@@ -156,10 +156,16 @@ export default async function LeagueOverviewPage({
         >
           <h2 style={{ fontSize: "1rem", margin: 0 }}>Week {week} matchups</h2>
           <span className="muted" style={{ fontSize: "0.82rem" }}>
-            League picks and scores appear as each game kicks off
+            {submission
+              ? "League split updates as more members submit"
+              : "Scores appear as each game kicks off"}
           </span>
         </div>
-        <WeekMatchups rows={matchupRows} memberCount={members.length} />
+        <WeekMatchups
+          rows={matchupRows}
+          memberCount={members.length}
+          submitted={submission !== null}
+        />
       </section>
 
       {lastWinners.length > 0 ? (
