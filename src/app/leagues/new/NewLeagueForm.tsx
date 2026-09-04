@@ -20,7 +20,7 @@ const SCOPE_OPTIONS: { value: LeagueScope; title: string; blurb: string }[] = [
   {
     value: "top25",
     title: "Top 25 only",
-    blurb: "Only games with at least one ranked team.",
+    blurb: "Any game with a ranked team, opponent regardless — the poll refreshes weekly.",
   },
 ];
 
@@ -53,9 +53,10 @@ export function NewLeagueForm({
       </div>
 
       <div className="surface" style={{ padding: "1.25rem" }}>
-        <h2 style={{ fontSize: "0.95rem", margin: "0 0 0.25rem" }}>What do you pick each week?</h2>
+        <h2 style={{ fontSize: "0.95rem", margin: "0 0 0.25rem" }}>What does your league pick?</h2>
         <p className="muted" style={{ margin: "0 0 1rem", fontSize: "0.85rem" }}>
-          This is the league default. As commissioner you can override any single week later.
+Your league follows one slate for the whole season. You can still change it up until
+          someone makes their first pick.
         </p>
 
         <div style={{ display: "grid", gap: "0.6rem" }}>

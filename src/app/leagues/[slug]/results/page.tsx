@@ -3,7 +3,7 @@ import { Badge } from "@/components/Badge";
 import { TeamChip } from "@/components/TeamChip";
 import { createClient } from "@/lib/supabase/server";
 import { loadLeague, parseWeek, resolveCurrentWeek, weekRange } from "@/lib/league";
-import { isLocked, loadMembers, loadWeekBoard } from "@/lib/board";
+import { isWeekLocked, loadMembers, loadWeekBoard } from "@/lib/board";
 import { ordinal } from "@/lib/format";
 import { WeekPicker } from "../WeekPicker";
 
@@ -55,7 +55,9 @@ export default async function ResultsPage({
 
   const anyGraded = board.games.some((game) => game.completed);
   const winners = rows.filter((row) => row.rank === 1 && row.points > 0);
-  const startedGames = board.games.filter((game) => isLocked(game));
+  // Every pick in a week reveals together, the moment the week locks.
+  const revealed = isWeekLocked(board.leagueWeek);
+  const shownGames = revealed ? board.games : [];
 
   return (
     <div>
@@ -131,10 +133,11 @@ export default async function ResultsPage({
       </div>
 
       <h3 style={{ fontSize: "0.95rem", margin: "0 0 0.6rem" }}>Pick sheet</h3>
-      {startedGames.length === 0 ? (
+      {shownGames.length === 0 ? (
         <div className="surface" style={{ padding: "1.5rem", textAlign: "center" }}>
           <p className="muted" style={{ margin: 0, fontSize: "0.9rem" }}>
-            Picks stay hidden until each game kicks off. Nothing in week {week} has started yet.
+            Picks stay hidden until the week locks at its first kickoff. Week {week} has not
+            started yet.
           </p>
         </div>
       ) : (
@@ -151,7 +154,7 @@ export default async function ResultsPage({
               </tr>
             </thead>
             <tbody>
-              {startedGames.map((game) => (
+              {shownGames.map((game) => (
                 <tr key={game.id}>
                   <td>
                     <div style={{ display: "grid", gap: "0.2rem" }}>

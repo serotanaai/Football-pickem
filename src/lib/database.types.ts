@@ -351,15 +351,6 @@ export interface Database {
         Args: { p_league_id: string; p_week: number; p_reset?: boolean };
         Returns: number;
       };
-      set_week_scope: {
-        Args: {
-          p_league_id: string;
-          p_week: number;
-          p_scope: LeagueScope;
-          p_conference_id?: number | null;
-        };
-        Returns: number;
-      };
       seed_playoffs: { Args: { p_league_id: string }; Returns: number };
       advance_playoffs: {
         Args: { p_league_id: string; p_week: number };

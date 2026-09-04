@@ -5,7 +5,8 @@ each week — one conference, all of FBS, or only games with a ranked team — a
 handles schedules, scoring, weekly winners and a fantasy-football-style playoff bracket.
 
 Built with Next.js (App Router) and Supabase. Game data comes from ESPN's public college
-football API. **FBS teams only.**
+football API, FBS-first: only a top-25 slate reaches outside FBS, and only to keep a ranked
+team's game against an FCS opponent on the board.
 
 ---
 
@@ -15,8 +16,9 @@ football API. **FBS teams only.**
 gets a private invite link (`/join/ABCD2345`); friends who follow it sign up with an email
 address and land straight in the league.
 
-**Weekly slates.** A league has a default slate type, and the commissioner can override any
-individual week:
+**Season slate.** A league picks one slate when it is created and follows it every week, so
+the rules never shift mid-season. It can be corrected up until the first pick is made, and is
+frozen after that:
 
 | Slate | What lands on the board |
 | --- | --- |
@@ -25,12 +27,17 @@ individual week:
 | `top25` | Only games with at least one team ranked in the top 25 |
 
 When more games qualify than the league's `max_games_per_week`, ranked matchups are taken
-first, then earliest kickoff. Games with a non-FBS opponent never make a slate.
+first, then earliest kickoff. Rankings come from the game's own weekly `curatedRank`, so a
+top-25 slate follows the poll as it moves.
 
-**Picks.** One point per correct pick, straight up — no spreads. Each game locks at its own
-kickoff, and **nobody can see anyone else's pick on a game until it starts**. That rule is a
-row-level-security policy in Postgres, not a UI convention, so it holds even against direct
-API access.
+`conference` and `all_fbs` slates are FBS-on-FBS only. A `top25` slate keeps a ranked team's
+game even when the opponent is FCS — otherwise September boards would have holes in them.
+
+**Picks.** One point per correct pick, straight up — no spreads. **A week locks as a whole
+the moment its first game kicks off** — so nobody can watch the noon games and then fill in
+their night slate — and every pick in that week reveals at the same moment. Both rules live in
+Postgres (a trigger and a row-level-security policy), not in the interface, so they hold even
+against direct API access.
 
 **Weekly results.** Every week has its own leaderboard and winner. Season standings track
 total points, record and weekly wins.
@@ -135,13 +142,13 @@ rules hold no matter what talks to the database:
 | `create_league` | Creates a league, slug and invite code, and enrols the commissioner |
 | `join_league_by_code` | Redeems an invite link |
 | `generate_week_board` | Builds a week's slate from its scope, capped at `max_games_per_week` |
-| `set_week_scope` | Commissioner switches a single week between the three slate types |
 | `grade_picks` | Marks picks correct or wrong once a game is final |
 | `seed_playoffs` | Seeds the bracket from regular-season points |
 | `advance_playoffs` | Scores a round and builds the next one |
 
-The `validate_pick` trigger rejects any pick placed after kickoff, on a team that is not in
-the game, or on a game that is not on that league's slate for the week.
+The `validate_pick` trigger rejects any pick placed after the week has locked, on a team that
+is not in the game, or on a game that is not on that league's slate for the week.
+`freeze_league_slate` stops the slate, conference or season changing once picks exist.
 
 ### ESPN endpoints
 

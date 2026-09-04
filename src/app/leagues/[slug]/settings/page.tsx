@@ -1,13 +1,11 @@
 import { Badge } from "@/components/Badge";
 import { createClient } from "@/lib/supabase/server";
-import { loadLeague, resolveCurrentWeek, weekRange } from "@/lib/league";
+import { loadLeague, weekRange } from "@/lib/league";
 import { loadMembers } from "@/lib/board";
 import { siteUrl } from "@/lib/env";
-import { scopeLabel } from "@/lib/format";
-import type { LeagueScope } from "@/lib/database.types";
+import { formatKickoff, scopeLabel } from "@/lib/format";
 import { leaveLeagueAction } from "../actions";
 import { InviteLink } from "./InviteLink";
-import { WeekScopeForm } from "./WeekScopeForm";
 import { LeagueSettingsForm, SeedPlayoffsForm } from "./CommissionerForms";
 
 export const dynamic = "force-dynamic";
@@ -26,12 +24,11 @@ export default async function SettingsPage({
   const isCommissioner = role === "commissioner";
 
   const supabase = await createClient();
-  const [members, { data: conferences }, { data: weeks }, { data: bracket }] = await Promise.all([
+  const [members, { data: weeks }, { data: bracket }] = await Promise.all([
     loadMembers(league.id),
-    supabase.from("conferences").select("id, name").order("name"),
     supabase
       .from("league_weeks")
-      .select("week, scope, conference_id, game_count")
+      .select("week, game_count, lock_at")
       .eq("league_id", league.id)
       .order("week"),
     supabase
@@ -42,15 +39,9 @@ export default async function SettingsPage({
   ]);
 
   const inviteUrl = `${siteUrl()}/join/${league.invite_code}`;
-  const currentWeek = await resolveCurrentWeek(league.season);
   const allWeeks = weekRange(league);
 
-  const currentByWeek: Record<number, { scope: LeagueScope; conference_id: number | null }> =
-    Object.fromEntries(
-      (weeks ?? []).map((row) => [row.week, { scope: row.scope, conference_id: row.conference_id }]),
-    );
-
-  const conferenceNameById = new Map((conferences ?? []).map((c) => [c.id, c.name]));
+  const gamesByWeek = new Map((weeks ?? []).map((row) => [row.week, row.game_count]));
 
   return (
     <div style={{ display: "grid", gap: "1.75rem" }}>
@@ -122,20 +113,35 @@ export default async function SettingsPage({
       </section>
 
       <section>
-        <h2 style={{ fontSize: "1rem", margin: "0 0 0.6rem" }}>Weekly slates</h2>
-        <div className="surface" style={{ overflow: "hidden", marginBottom: isCommissioner ? "0.85rem" : 0 }}>
+        <h2 style={{ fontSize: "1rem", margin: "0 0 0.6rem" }}>Season slate</h2>
+        <div className="surface" style={{ padding: "1.15rem", marginBottom: "0.85rem" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", flexWrap: "wrap" }}>
+            <Badge tone="accent">{scopeLabel(league.scope, conference?.name)}</Badge>
+            <span className="muted" style={{ fontSize: "0.88rem" }}>
+              every week, all season
+            </span>
+          </div>
+          <p className="note">
+            A league follows one slate for its whole season, so the rules never move mid-year.
+            {league.scope === "top25"
+              ? " Rankings refresh every week, and a ranked team's game counts whoever it plays."
+              : " Games against non-FBS opponents never appear."}{" "}
+            It can only be changed before the first pick is made.
+          </p>
+        </div>
+
+        <div className="surface" style={{ overflow: "hidden" }}>
           <table>
             <thead>
               <tr>
-                <th style={{ width: 80 }}>Week</th>
-                <th>Slate</th>
+                <th style={{ width: 90 }}>Week</th>
+                <th>Locks at</th>
                 <th style={{ textAlign: "right" }}>Games</th>
               </tr>
             </thead>
             <tbody>
               {allWeeks.map((week) => {
-                const row = currentByWeek[week];
-                const gameCount = (weeks ?? []).find((w) => w.week === week)?.game_count ?? 0;
+                const row = (weeks ?? []).find((w) => w.week === week);
                 const isPlayoffWeek =
                   league.playoff_teams > 0 && week > league.regular_season_end_week;
 
@@ -149,21 +155,14 @@ export default async function SettingsPage({
                         </span>
                       ) : null}
                     </td>
-                    <td className={row ? undefined : "muted"}>
-                      {row
-                        ? scopeLabel(
-                            row.scope,
-                            row.conference_id
-                              ? conferenceNameById.get(row.conference_id)
-                              : null,
-                          )
-                        : `${scopeLabel(league.scope, conference?.name)} (league default)`}
+                    <td className={row?.lock_at ? undefined : "muted"}>
+                      {row?.lock_at ? formatKickoff(row.lock_at) : "Not built yet"}
                     </td>
                     <td
                       className="muted"
                       style={{ textAlign: "right", fontVariantNumeric: "tabular-nums" }}
                     >
-                      {gameCount || "—"}
+                      {gamesByWeek.get(week) || "—"}
                     </td>
                   </tr>
                 );
@@ -171,20 +170,9 @@ export default async function SettingsPage({
             </tbody>
           </table>
         </div>
-
-        {isCommissioner ? (
-          <div className="surface" style={{ padding: "1.15rem" }}>
-            <h3 style={{ fontSize: "0.9rem", margin: "0 0 0.75rem" }}>Change a week</h3>
-            <WeekScopeForm
-              leagueId={league.id}
-              slug={slug}
-              weeks={allWeeks}
-              conferences={conferences ?? []}
-              defaultWeek={Math.min(Math.max(currentWeek, league.start_week), allWeeks.at(-1)!)}
-              currentByWeek={currentByWeek}
-            />
-          </div>
-        ) : null}
+        <p className="note">
+          Every pick in a week locks together, the moment that week&apos;s first game kicks off.
+        </p>
       </section>
 
       {isCommissioner ? (

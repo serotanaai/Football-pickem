@@ -4,11 +4,8 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { requireUser } from "@/lib/league";
-import type { LeagueScope } from "@/lib/database.types";
 
 export type ActionState = { error?: string; ok?: string };
-
-const SCOPES: LeagueScope[] = ["conference", "all_fbs", "top25"];
 
 export async function savePicksAction(
   _prev: ActionState,
@@ -55,36 +52,6 @@ export async function savePicksAction(
   revalidatePath(`/leagues/${slug}/picks`);
   revalidatePath(`/leagues/${slug}`);
   return { ok: `Saved ${selections.length} ${selections.length === 1 ? "pick" : "picks"}.` };
-}
-
-export async function setWeekScopeAction(
-  _prev: ActionState,
-  formData: FormData,
-): Promise<ActionState> {
-  const leagueId = String(formData.get("league_id") ?? "");
-  const slug = String(formData.get("slug") ?? "");
-  const week = Number(formData.get("week"));
-  const scope = String(formData.get("scope") ?? "") as LeagueScope;
-  const conferenceId = Number(formData.get("conference_id"));
-
-  if (!SCOPES.includes(scope)) return { error: "Pick a valid slate." };
-  if (scope === "conference" && !Number.isInteger(conferenceId)) {
-    return { error: "Choose a conference for that week." };
-  }
-
-  const supabase = await createClient();
-  const { data, error } = await supabase.rpc("set_week_scope", {
-    p_league_id: leagueId,
-    p_week: week,
-    p_scope: scope,
-    p_conference_id: scope === "conference" ? conferenceId : null,
-  });
-
-  if (error) return { error: error.message };
-
-  revalidatePath(`/leagues/${slug}/settings`);
-  revalidatePath(`/leagues/${slug}/picks`);
-  return { ok: `Week ${week} rebuilt with ${data} games.` };
 }
 
 export async function rebuildWeekAction(

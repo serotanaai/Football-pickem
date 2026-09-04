@@ -5,11 +5,11 @@ import { createClient } from "@/lib/supabase/server";
 const FEATURES = [
   {
     title: "Pick the slate you want",
-    body: "Set each week to a single conference, every FBS matchup, or just games with a ranked team. The commissioner can change it week to week.",
+    body: "Choose one slate at kickoff of the season — a single conference, every FBS matchup, or just games with a ranked team — and your league follows it all year.",
   },
   {
     title: "Games arrive on their own",
-    body: "Schedules, kickoff times, rankings and final scores come straight from ESPN's college football feed. FBS only — no FCS filler.",
+    body: "Schedules, kickoff times, rankings and final scores come straight from ESPN's college football feed. Rankings refresh every week, so a top-25 slate follows the poll.",
   },
   {
     title: "Weekly winners",
@@ -21,7 +21,7 @@ const FEATURES = [
   },
   {
     title: "Picks stay secret",
-    body: "Nobody sees anyone else's pick on a game until it kicks off. That rule lives in the database, not just the interface.",
+    body: "The week locks the moment its first game kicks off, and every pick reveals at once. That rule lives in the database, not just the interface.",
   },
   {
     title: "Invite by link",

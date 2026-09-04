@@ -23,7 +23,7 @@ export type PickGame = {
   winner_team_id: number | null;
   home: { id: number; school: string; display_name: string; abbreviation: string | null; logo: string | null } | null;
   away: { id: number; school: string; display_name: string; abbreviation: string | null; logo: string | null } | null;
-  locked: boolean;
+  started: boolean;
 };
 
 export function PickBoard({
@@ -32,17 +32,20 @@ export function PickBoard({
   week,
   games,
   initialPicks,
+  weekLocked,
 }: {
   leagueId: string;
   slug: string;
   week: number;
   games: PickGame[];
   initialPicks: Record<number, number>;
+  weekLocked: boolean;
 }) {
   const [picks, setPicks] = useState<Record<number, number>>(initialPicks);
   const [state, action, pending] = useActionState<ActionState, FormData>(savePicksAction, {});
 
-  const openGames = games.filter((game) => !game.locked);
+  // The whole week is open or shut together, so every game counts once it is open.
+  const openGames = weekLocked ? [] : games;
   const made = openGames.filter((game) => picks[game.id]).length;
 
   const payload = JSON.stringify(
@@ -84,6 +87,7 @@ export function PickBoard({
                 <GameRow
                   key={game.id}
                   game={game}
+                  locked={weekLocked}
                   picked={picks[game.id]}
                   onPick={(teamId) =>
                     setPicks((prev) => ({ ...prev, [game.id]: teamId }))
@@ -111,7 +115,11 @@ export function PickBoard({
         }}
       >
         <span style={{ fontSize: "0.88rem", fontWeight: 600 }}>
-          {made} of {openGames.length} open {openGames.length === 1 ? "game" : "games"} picked
+          {weekLocked
+            ? `Week ${week} is locked — ${
+                games.filter((game) => picks[game.id]).length
+              } of ${games.length} picked`
+            : `${made} of ${openGames.length} ${openGames.length === 1 ? "game" : "games"} picked`}
         </span>
 
         {state.error ? (
@@ -124,7 +132,7 @@ export function PickBoard({
         <button
           className="btn btn-primary"
           type="submit"
-          disabled={pending || made === 0}
+          disabled={pending || weekLocked || made === 0}
           style={{ marginLeft: "auto" }}
         >
           {pending ? "Saving…" : "Save picks"}
@@ -136,10 +144,12 @@ export function PickBoard({
 
 function GameRow({
   game,
+  locked,
   picked,
   onPick,
 }: {
   game: PickGame;
+  locked: boolean;
   picked: number | undefined;
   onPick: (teamId: number) => void;
 }) {
@@ -154,7 +164,7 @@ function GameRow({
       className="surface"
       style={{
         padding: "0.75rem 0.9rem",
-        opacity: game.locked && !picked ? 0.72 : 1,
+        opacity: locked && !picked ? 0.72 : 1,
       }}
     >
       <div
@@ -170,9 +180,9 @@ function GameRow({
         {game.neutral_site ? <Badge tone="muted">Neutral</Badge> : null}
         {game.broadcast ? <span className="muted">· {game.broadcast}</span> : null}
         {game.odds_details ? <span className="muted">· {game.odds_details}</span> : null}
-        {game.locked ? (
+        {game.completed || game.started ? (
           <span style={{ marginLeft: "auto" }}>
-            <Badge tone="muted">{game.completed ? "Final" : "Locked"}</Badge>
+            <Badge tone="muted">{game.completed ? "Final" : "Underway"}</Badge>
           </span>
         ) : null}
       </div>
@@ -192,7 +202,7 @@ function GameRow({
             <button
               key={team.id}
               type="button"
-              disabled={game.locked}
+              disabled={locked}
               onClick={() => onPick(team.id)}
               style={{
                 display: "flex",
@@ -202,7 +212,7 @@ function GameRow({
                 textAlign: "left",
                 padding: "0.55rem 0.65rem",
                 borderRadius: 9,
-                cursor: game.locked ? "default" : "pointer",
+                cursor: locked ? "default" : "pointer",
                 background: selected ? "var(--accent-soft)" : "transparent",
                 border: `1.5px solid ${selected ? "var(--accent)" : "var(--border)"}`,
                 color: lost ? "var(--muted)" : "var(--text)",
