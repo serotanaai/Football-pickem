@@ -21,6 +21,7 @@ export interface Database {
           short_name: string | null;
           abbreviation: string | null;
           logo: string | null;
+          selectable: boolean;
         };
         Insert: {
           id: number;
@@ -28,6 +29,7 @@ export interface Database {
           short_name?: string | null;
           abbreviation?: string | null;
           logo?: string | null;
+          selectable?: boolean;
         };
         Update: Partial<Database["public"]["Tables"]["conferences"]["Insert"]>;
         Relationships: [];

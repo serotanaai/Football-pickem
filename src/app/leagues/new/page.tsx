@@ -10,9 +10,12 @@ export default async function NewLeaguePage() {
   const user = await requireUser();
   const supabase = await createClient();
 
+  // FBS Independents is excluded: it is only 1-2 games a week, so a league
+  // scoped to it would have almost nothing to pick.
   const { data: conferences } = await supabase
     .from("conferences")
     .select("id, name, short_name")
+    .eq("selectable", true)
     .order("name");
 
   return (

@@ -15,7 +15,13 @@ const BASE = "https://site.web.api.espn.com/apis/site/v2/sports/football/college
 
 export const FBS_GROUP = 80;
 
-/** ESPN group id -> conference. Mirrors supabase/migrations/0005. */
+/**
+ * ESPN group id -> conference. Mirrors supabase/migrations/0005.
+ *
+ * Independents (18) belongs here so Notre Dame and UConn count as FBS, but it is
+ * flagged not-selectable in the database — a league scoped to it would see one
+ * or two games a week.
+ */
 export const FBS_CONFERENCES: { id: number; name: string; shortName: string }[] = [
   { id: 1, name: "Atlantic Coast Conference", shortName: "ACC" },
   { id: 4, name: "Big 12 Conference", shortName: "Big 12" },
