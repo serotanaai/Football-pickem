@@ -33,12 +33,15 @@ export function PickBoard({
   week,
   games,
   initialPicks,
+  submitted,
 }: {
   leagueId: string;
   slug: string;
   week: number;
   games: PickGame[];
   initialPicks: Record<number, number>;
+  /** Once the week is in, the board becomes a record of what you picked. */
+  submitted: boolean;
 }) {
   const [picks, setPicks] = useState<Record<number, number>>(initialPicks);
   const [confirming, setConfirming] = useState(false);
@@ -88,6 +91,7 @@ export function PickBoard({
                   key={game.id}
                   game={game}
                   picked={picks[game.id]}
+                  readOnly={submitted}
                   onPick={(teamId) =>
                     setPicks((prev) => ({ ...prev, [game.id]: teamId }))
                   }
@@ -98,6 +102,7 @@ export function PickBoard({
         ))}
       </div>
 
+      {submitted ? null : (
       <div
         style={{
           position: "sticky",
@@ -179,6 +184,7 @@ export function PickBoard({
           </div>
         )}
       </div>
+      )}
     </form>
   );
 }
@@ -187,10 +193,12 @@ function GameRow({
   game,
   picked,
   onPick,
+  readOnly,
 }: {
   game: PickGame;
   picked: number | undefined;
   onPick: (teamId: number) => void;
+  readOnly: boolean;
 }) {
   const detail = game.completed
     ? "Final"
@@ -198,9 +206,14 @@ function GameRow({
       ? (game.status_detail ?? "In progress")
       : null;
 
-  // What this game did to your week, once it is out of reach.
+  // What this game did to your week, once it is out of reach — or, on a week
+  // you have already submitted, what you did with it.
   const outcome = !game.locked
-    ? null
+    ? !readOnly
+      ? null
+      : picked === undefined
+        ? { label: "No pick", tone: "muted" as const }
+        : { label: "Your pick", tone: "accent" as const }
     : picked === undefined
       ? { label: "Missed — no pick", tone: "muted" as const }
       : !game.completed
@@ -216,6 +229,7 @@ function GameRow({
       className="surface"
       style={{
         padding: "0.75rem 0.9rem",
+        // A submitted week is not a disabled one; only games out of reach recede.
         opacity: game.locked ? 0.7 : 1,
       }}
     >
@@ -234,14 +248,16 @@ function GameRow({
         {game.neutral_site ? <Badge tone="muted">Neutral</Badge> : null}
         {game.broadcast ? <span className="muted">· {game.broadcast}</span> : null}
         {game.odds_details ? <span className="muted">· {game.odds_details}</span> : null}
-        {game.locked ? (
+        {game.locked || outcome ? (
           <span
             style={{ marginLeft: "auto", display: "flex", gap: "0.35rem", alignItems: "center" }}
           >
             {outcome ? <Badge tone={outcome.tone}>{outcome.label}</Badge> : null}
-            <Badge tone="muted">
-              {game.completed ? "Final" : game.status === "in_progress" ? "In progress" : "Locked"}
-            </Badge>
+            {game.locked ? (
+              <Badge tone="muted">
+                {game.completed ? "Final" : game.status === "in_progress" ? "In progress" : "Locked"}
+              </Badge>
+            ) : null}
           </span>
         ) : null}
       </div>
@@ -261,7 +277,7 @@ function GameRow({
             <button
               key={team.id}
               type="button"
-              disabled={game.locked}
+              disabled={game.locked || readOnly}
               onClick={() => onPick(team.id)}
               style={{
                 display: "flex",
@@ -271,7 +287,7 @@ function GameRow({
                 textAlign: "left",
                 padding: "0.55rem 0.65rem",
                 borderRadius: 9,
-                cursor: game.locked ? "default" : "pointer",
+                cursor: game.locked || readOnly ? "default" : "pointer",
                 background: selected ? "var(--accent-soft)" : "transparent",
                 border: `1.5px solid ${selected ? "var(--accent)" : "var(--border)"}`,
                 color: lost ? "var(--muted)" : "var(--text)",
