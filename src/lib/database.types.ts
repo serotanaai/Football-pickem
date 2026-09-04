@@ -252,6 +252,18 @@ export interface Database {
         Update: { team_id?: number };
         Relationships: [];
       };
+      pick_submissions: {
+        Row: {
+          league_id: string;
+          user_id: string;
+          week: number;
+          pick_count: number;
+          submitted_at: string;
+        };
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
       playoff_matchups: {
         Row: {
           id: string;
@@ -354,6 +366,14 @@ export interface Database {
         Returns: number;
       };
       seed_playoffs: { Args: { p_league_id: string }; Returns: number };
+      submit_week_picks: {
+        Args: {
+          p_league_id: string;
+          p_week: number;
+          p_picks: { game_id: number; team_id: number }[];
+        };
+        Returns: number;
+      };
       advance_playoffs: {
         Args: { p_league_id: string; p_week: number };
         Returns: number;

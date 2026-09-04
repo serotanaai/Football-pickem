@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { Badge } from "@/components/Badge";
-import { ensureWeekBoard, isLocked } from "@/lib/board";
+import Link from "next/link";
+import { ensureWeekBoard, isLocked, loadSubmission } from "@/lib/board";
 import { createClient } from "@/lib/supabase/server";
 import { loadLeague, parseWeek, resolveCurrentWeek, weekRange } from "@/lib/league";
 import { formatKickoff, POINTS_PER_PICK, scopeLabel } from "@/lib/format";
@@ -23,6 +24,7 @@ export default async function PicksPage({
   const week = parseWeek(league, weekParam, await resolveCurrentWeek(league.season));
 
   const { leagueWeek, games } = await ensureWeekBoard(league.id, week);
+  const submission = await loadSubmission(league.id, userId, week);
 
   const supabase = await createClient();
   const { data: myPicks } = await supabase
@@ -102,7 +104,27 @@ export default async function PicksPage({
         </Suspense>
       </div>
 
-      {boardGames.length === 0 ? (
+      {submission ? (
+        <div className="surface" style={{ padding: "1.75rem 1.5rem", marginBottom: "1.5rem" }}>
+          <div
+            style={{ display: "flex", alignItems: "center", gap: "0.6rem", marginBottom: "0.5rem" }}
+          >
+            <Badge tone="accent">✓ Submitted</Badge>
+            <strong style={{ fontSize: "1rem" }}>Week {week} is locked in</strong>
+          </div>
+          <p className="muted" style={{ margin: "0 0 1.25rem", fontSize: "0.9rem" }}>
+            You submitted {submission.pick_count}{" "}
+            {submission.pick_count === 1 ? "pick" : "picks"} on{" "}
+            {formatKickoff(submission.submitted_at)}. Picks are final once submitted, so there is
+            nothing left to change this week.
+          </p>
+          <Link className="btn btn-primary" href={`/leagues/${slug}`}>
+            Back to league overview
+          </Link>
+        </div>
+      ) : null}
+
+      {submission ? null : boardGames.length === 0 ? (
         <div className="surface" style={{ padding: "2.25rem 1.5rem", textAlign: "center" }}>
           <p style={{ margin: "0 0 0.4rem", fontWeight: 600 }}>No games on this week&apos;s slate yet.</p>
           <p className="muted" style={{ margin: 0, fontSize: "0.9rem" }}>

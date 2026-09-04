@@ -4,7 +4,7 @@ import { useActionState, useState } from "react";
 import { TeamChip } from "@/components/TeamChip";
 import { Badge } from "@/components/Badge";
 import { formatDay, formatTime, POINTS_PER_PICK } from "@/lib/format";
-import { savePicksAction } from "../actions";
+import { submitPicksAction } from "../actions";
 import type { ActionState } from "../actions";
 
 export type PickGame = {
@@ -40,7 +40,8 @@ export function PickBoard({
   initialPicks: Record<number, number>;
 }) {
   const [picks, setPicks] = useState<Record<number, number>>(initialPicks);
-  const [state, action, pending] = useActionState<ActionState, FormData>(savePicksAction, {});
+  const [confirming, setConfirming] = useState(false);
+  const [state, action, pending] = useActionState<ActionState, FormData>(submitPicksAction, {});
 
   const openGames = games.filter((game) => !game.locked);
   const made = openGames.filter((game) => picks[game.id]).length;
@@ -103,45 +104,79 @@ export function PickBoard({
           marginTop: "1.5rem",
           padding: "0.85rem 1rem",
           background: "var(--surface)",
-          border: "1px solid var(--border)",
+          border: `1px solid ${confirming ? "var(--accent)" : "var(--border)"}`,
           borderRadius: 12,
-          display: "flex",
-          alignItems: "center",
-          gap: "1rem",
-          flexWrap: "wrap",
+          display: "grid",
+          gap: "0.6rem",
         }}
       >
-        <span style={{ display: "grid", gap: "0.15rem" }}>
-          <span style={{ fontSize: "0.88rem", fontWeight: 600 }}>
-            {made} of {openGames.length} open {openGames.length === 1 ? "game" : "games"} picked
-          </span>
-          <span className="muted" style={{ fontSize: "0.78rem" }}>
-            {openGames.length === 0
-              ? `Every game in week ${week} has kicked off.`
-              : `Still on the table: ${(
-                  openGames.length * POINTS_PER_PICK
-                ).toLocaleString()} points`}
-            {gone > 0
-              ? ` · ${gone} ${gone === 1 ? "game" : "games"} already kicked off`
-              : ""}
-          </span>
-        </span>
+        {confirming ? (
+          <>
+            <div>
+              <p style={{ margin: "0 0 0.2rem", fontWeight: 650, fontSize: "0.92rem" }}>
+                Submit {made} {made === 1 ? "pick" : "picks"} for week {week}?
+              </p>
+              <p className="muted" style={{ margin: 0, fontSize: "0.82rem" }}>
+                This is final — you will not be able to change them afterwards.
+                {made < openGames.length
+                  ? ` You are leaving ${openGames.length - made} open ${
+                      openGames.length - made === 1 ? "game" : "games"
+                    } unpicked, worth ${(
+                      (openGames.length - made) * POINTS_PER_PICK
+                    ).toLocaleString()} points.`
+                  : ""}
+              </p>
+            </div>
+            <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+              <button className="btn btn-primary" type="submit" disabled={pending}>
+                {pending ? "Submitting…" : "Yes, submit — final"}
+              </button>
+              <button
+                className="btn"
+                type="button"
+                onClick={() => setConfirming(false)}
+                disabled={pending}
+              >
+                Go back
+              </button>
+            </div>
+          </>
+        ) : (
+          <div
+            style={{ display: "flex", alignItems: "center", gap: "1rem", flexWrap: "wrap" }}
+          >
+            <span style={{ display: "grid", gap: "0.15rem" }}>
+              <span style={{ fontSize: "0.88rem", fontWeight: 600 }}>
+                {made} of {openGames.length} open{" "}
+                {openGames.length === 1 ? "game" : "games"} picked
+              </span>
+              <span className="muted" style={{ fontSize: "0.78rem" }}>
+                {openGames.length === 0
+                  ? `Every game in week ${week} has kicked off.`
+                  : `Still on the table: ${(
+                      openGames.length * POINTS_PER_PICK
+                    ).toLocaleString()} points`}
+                {gone > 0
+                  ? ` · ${gone} ${gone === 1 ? "game" : "games"} already kicked off`
+                  : ""}
+              </span>
+            </span>
 
-        {state.error ? (
-          <span style={{ color: "var(--danger)", fontSize: "0.85rem" }}>{state.error}</span>
-        ) : null}
-        {state.ok ? (
-          <span style={{ color: "var(--accent)", fontSize: "0.85rem" }}>{state.ok}</span>
-        ) : null}
+            {state.error ? (
+              <span style={{ color: "var(--danger)", fontSize: "0.85rem" }}>{state.error}</span>
+            ) : null}
 
-        <button
-          className="btn btn-primary"
-          type="submit"
-          disabled={pending || made === 0}
-          style={{ marginLeft: "auto" }}
-        >
-          {pending ? "Saving…" : "Save picks"}
-        </button>
+            <button
+              className="btn btn-primary"
+              type="button"
+              onClick={() => setConfirming(true)}
+              disabled={made === 0}
+              style={{ marginLeft: "auto" }}
+            >
+              Submit picks
+            </button>
+          </div>
+        )}
       </div>
     </form>
   );

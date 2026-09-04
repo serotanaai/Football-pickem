@@ -7,11 +7,10 @@ import { requireUser } from "@/lib/league";
 
 export type ActionState = { error?: string; ok?: string };
 
-export async function savePicksAction(
+export async function submitPicksAction(
   _prev: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
-  const user = await requireUser();
   const leagueId = String(formData.get("league_id") ?? "");
   const slug = String(formData.get("slug") ?? "");
   const week = Number(formData.get("week"));
@@ -36,22 +35,17 @@ export async function savePicksAction(
   if (selections.length === 0) return { error: "Choose at least one winner first." };
 
   const supabase = await createClient();
-  const { error } = await supabase.from("picks").upsert(
-    selections.map((selection) => ({
-      league_id: leagueId,
-      user_id: user.id,
-      week,
-      game_id: selection.game_id,
-      team_id: selection.team_id,
-    })),
-    { onConflict: "league_id,user_id,game_id" },
-  );
+  const { data, error } = await supabase.rpc("submit_week_picks", {
+    p_league_id: leagueId,
+    p_week: week,
+    p_picks: selections,
+  });
 
   if (error) return { error: error.message };
 
   revalidatePath(`/leagues/${slug}/picks`);
   revalidatePath(`/leagues/${slug}`);
-  return { ok: `Saved ${selections.length} ${selections.length === 1 ? "pick" : "picks"}.` };
+  return { ok: `Week ${week} submitted — ${data} picks locked in.` };
 }
 
 export async function rebuildWeekAction(

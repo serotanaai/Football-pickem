@@ -2,8 +2,9 @@ import Link from "next/link";
 import { Badge } from "@/components/Badge";
 import { createClient } from "@/lib/supabase/server";
 import { loadLeague, resolveCurrentWeek, weekRange } from "@/lib/league";
-import { loadMembers, loadWeekBoard } from "@/lib/board";
+import { loadMembers, loadSubmission, loadWeekBoard, loadWeekConsensus } from "@/lib/board";
 import { ordinal } from "@/lib/format";
+import { WeekMatchups } from "./WeekMatchups";
 
 export const dynamic = "force-dynamic";
 
@@ -52,6 +53,9 @@ export default async function LeagueOverviewPage({
     ? (weekly ?? []).filter((row) => row.week === lastCompletedWeek && row.week_rank === 1)
     : [];
 
+  const consensus = await loadWeekConsensus(league.id, week, userId, board.games);
+  const submission = await loadSubmission(league.id, userId, week);
+
   const myPickCount = board.games.length
     ? (
         await supabase
@@ -91,9 +95,31 @@ export default async function LeagueOverviewPage({
           href={`/leagues/${slug}/picks?week=${week}`}
           style={{ marginLeft: "auto" }}
         >
-          {myPickCount > 0 ? "Review picks" : "Make picks"}
+          {submission ? "View submitted picks" : myPickCount > 0 ? "Review picks" : "Make picks"}
         </Link>
       </div>
+
+      <section>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "baseline",
+            gap: "0.6rem",
+            flexWrap: "wrap",
+            marginBottom: "0.7rem",
+          }}
+        >
+          <h2 style={{ fontSize: "1rem", margin: 0 }}>Week {week} matchups</h2>
+          <span className="muted" style={{ fontSize: "0.82rem" }}>
+            League picks and scores appear as each game kicks off
+          </span>
+        </div>
+        <WeekMatchups
+          games={board.games}
+          consensus={consensus}
+          memberCount={members.length}
+        />
+      </section>
 
       {lastWinners.length > 0 ? (
         <div className="surface" style={{ padding: "1.15rem 1.25rem" }}>

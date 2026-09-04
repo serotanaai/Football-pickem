@@ -33,8 +33,9 @@ top-25 slate follows the poll as it moves.
 `conference` and `all_fbs` slates are FBS-on-FBS only. A `top25` slate keeps a ranked team's
 game even when the opponent is FCS — otherwise September boards would have holes in them.
 
-**Picks.** **100 points per correct pick**, straight up — no spreads. **Each game locks at its
-own kickoff.** You can keep submitting picks through the week right up until the last game
+**Picks.** **100 points per correct pick**, straight up — no spreads. **Submitting a week is
+final**: the app asks for confirmation, then seals it, and the pick trigger refuses any further
+write for that member and week. Until you submit, **each game locks at its own kickoff.** You can keep submitting picks through the week right up until the last game
 starts, but every game that has already begun is gone: turn up after 5 of 10 games have
 kicked off and the most you can win that week is 500. A pick reveals to the rest of the league
 at the same moment it locks. Both rules live in Postgres (a trigger and a row-level-security
@@ -155,11 +156,19 @@ rules hold no matter what talks to the database:
 | `join_league_by_code` | Redeems an invite link |
 | `generate_week_board` | Builds a week's slate from its scope, capped at `max_games_per_week` |
 | `grade_picks` | Marks picks correct or wrong once a game is final |
+| `submit_week_picks` | Saves a week's picks and seals it, in one transaction |
 | `seed_playoffs` | Seeds the bracket on weekly wins, then cumulative points |
 | `advance_playoffs` | Scores a round and builds the next one |
 
-The `validate_pick` trigger rejects any pick placed after that game has kicked off, on a team
-that is not in the game, or on a game that is not on that league's slate for the week.
+The `validate_pick` trigger rejects any pick placed into an already-submitted week, after that
+game has kicked off, on a team that is not in the game, or on a game that is not on that
+league's slate for the week.
+
+**League consensus.** The overview lists the week's slate in kickoff order with the split of
+how the league picked each game. Those percentages only appear once a game has started,
+because the picks policy returns nothing but your own row before then — showing a pre-kickoff
+percentage would mean weakening that policy, which in a six-person league would effectively
+expose individual picks.
 `freeze_league_slate` stops the slate, conference or season changing once picks exist.
 
 ### ESPN endpoints
