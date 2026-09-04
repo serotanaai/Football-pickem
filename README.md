@@ -76,6 +76,9 @@ Emails** before inviting a real league.
 cp .env.example .env.local
 ```
 
+`.env.example` already carries this project's URL and publishable key, so the app
+boots as soon as you copy it. Fill the remaining two in when you want game data:
+
 | Variable | Where it comes from |
 | --- | --- |
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase → Settings → API |
