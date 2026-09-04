@@ -85,44 +85,22 @@ export async function syncWeek(db: Supabase, season: number, week: number) {
  * Grades every finished game, tops up each league's slate for the week, and
  * settles any playoff matchup whose games have all gone final.
  */
+/**
+ * Grades finished games, rebuilds every league's board for the weeks in play,
+ * and settles any playoff matchups they have reached.
+ *
+ * The per-league work runs inside Postgres rather than as a call per league
+ * from here: the round trip, not the query, was what capped how many leagues a
+ * scheduled run could get through before it was killed.
+ */
 export async function refreshLeagues(db: Supabase, season: number, weeks: number[]) {
   const graded = await db.rpc("grade_picks");
   if (graded.error) throw new Error(`grade_picks: ${graded.error.message}`);
 
-  const { data: leagues, error } = await db
-    .from("leagues")
-    .select("id, start_week, regular_season_end_week, playoff_teams")
-    .eq("season", season);
-  if (error) throw new Error(`leagues: ${error.message}`);
+  const refreshed = await db.rpc("refresh_season", { p_season: season, p_weeks: weeks });
+  if (refreshed.error) throw new Error(`refresh_season: ${refreshed.error.message}`);
 
-  let boards = 0;
-  let advanced = 0;
-
-  for (const league of leagues ?? []) {
-    const rounds = { 8: 3, 4: 2, 2: 1 }[league.playoff_teams] ?? 0;
-    const finalWeek = league.regular_season_end_week + rounds;
-
-    for (const week of weeks) {
-      if (week < league.start_week || week > finalWeek) continue;
-
-      const board = await db.rpc("generate_week_board", {
-        p_league_id: league.id,
-        p_week: week,
-        p_reset: false,
-      });
-      if (!board.error) boards += 1;
-
-      if (league.playoff_teams > 0 && week > league.regular_season_end_week) {
-        const result = await db.rpc("advance_playoffs", {
-          p_league_id: league.id,
-          p_week: week,
-        });
-        if (!result.error && typeof result.data === "number") advanced += result.data;
-      }
-    }
-  }
-
-  return { gradedPicks: graded.data ?? 0, boards, advancedMatchups: advanced };
+  return { gradedPicks: graded.data ?? 0, ...refreshed.data };
 }
 
 /** Parses ?season / ?week / ?weeks, defaulting to the week ESPN says is live. */

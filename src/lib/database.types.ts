@@ -309,6 +309,7 @@ export interface Database {
           incorrect: number;
           points: number;
           week_rank: number;
+          week_won: boolean;
         };
         Relationships: [];
       };
@@ -358,6 +359,16 @@ export interface Database {
           member_count: number;
           already_member: boolean;
         }[];
+      };
+      refresh_season: {
+        Args: { p_season: number; p_weeks: number[] };
+        Returns: {
+          leagues: number;
+          boards: number;
+          advancedMatchups: number;
+          failed: number;
+          firstError: string | null;
+        };
       };
       regenerate_invite_code: { Args: { p_league_id: string }; Returns: string };
       leave_league: { Args: { p_league_id: string }; Returns: undefined };

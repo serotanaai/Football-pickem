@@ -106,3 +106,24 @@ export function parseWeek(
   if (Number.isInteger(value) && value > 0) return clampWeek(league, value);
   return clampWeek(league, fallback);
 }
+
+/** Leagues one account may be in per season, mirroring the league_members trigger. */
+export const MAX_LEAGUES_PER_SEASON = 3;
+
+/**
+ * How many leagues the signed-in user is already in for a season.
+ *
+ * The cap itself is enforced by a trigger on league_members. This exists only
+ * so the UI can say so up front instead of letting someone fill in a form the
+ * database is going to refuse.
+ */
+export async function leagueCountThisSeason(userId: string, season: number): Promise<number> {
+  const supabase = await createClient();
+  const { count } = await supabase
+    .from("league_members")
+    .select("league_id, leagues!inner(season)", { count: "exact", head: true })
+    .eq("user_id", userId)
+    .eq("leagues.season", season);
+
+  return count ?? 0;
+}
