@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { loadLeague, resolveCurrentWeek, weekRange } from "@/lib/league";
 import { loadMembers, loadSubmission, loadWeekBoard, loadWeekConsensus } from "@/lib/board";
 import { ordinal } from "@/lib/format";
-import { WeekMatchups } from "./WeekMatchups";
+import { WeekMatchups, type MatchupRow } from "./WeekMatchups";
 
 export const dynamic = "force-dynamic";
 
@@ -55,6 +55,50 @@ export default async function LeagueOverviewPage({
 
   const consensus = await loadWeekConsensus(league.id, week, userId, board.games);
   const submission = await loadSubmission(league.id, userId, week);
+
+  // Flattened for the client component: Maps do not cross that boundary well.
+  const matchupRows: MatchupRow[] = board.games.map((game) => {
+    const split = consensus.get(game.id);
+    const side = (
+      team: typeof game.home,
+      teamId: number,
+      rank: number | null,
+      score: number | null,
+      pct: number,
+      count: number,
+    ) => ({
+      teamId,
+      school: team?.school ?? "TBD",
+      abbreviation: team?.abbreviation ?? null,
+      logo: team?.logo ?? null,
+      rank,
+      score,
+      pct,
+      count,
+    });
+
+    return {
+      id: game.id,
+      startTime: game.start_time,
+      status: game.status,
+      completed: game.completed,
+      statusDetail: game.status_detail,
+      broadcast: game.broadcast,
+      neutralSite: game.neutral_site,
+      winnerTeamId: game.winner_team_id,
+      revealed: split?.revealed ?? false,
+      totalPicks: split?.total ?? 0,
+      myTeamId: split?.myTeamId ?? null,
+      home: side(
+        game.home, game.home_team_id, game.home_rank, game.home_score,
+        split?.homePct ?? 0, split?.homeCount ?? 0,
+      ),
+      away: side(
+        game.away, game.away_team_id, game.away_rank, game.away_score,
+        split?.awayPct ?? 0, split?.awayCount ?? 0,
+      ),
+    };
+  });
 
   const myPickCount = board.games.length
     ? (
@@ -114,11 +158,7 @@ export default async function LeagueOverviewPage({
             League picks and scores appear as each game kicks off
           </span>
         </div>
-        <WeekMatchups
-          games={board.games}
-          consensus={consensus}
-          memberCount={members.length}
-        />
+        <WeekMatchups rows={matchupRows} memberCount={members.length} />
       </section>
 
       {lastWinners.length > 0 ? (

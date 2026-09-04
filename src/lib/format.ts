@@ -25,28 +25,23 @@ export function scopeBadge(scope: LeagueScope, conferenceShortName?: string | nu
   }
 }
 
-export function formatKickoff(iso: string): string {
-  return new Date(iso).toLocaleString(undefined, {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
-}
+// Kickoff times render through <LocalTime>, never here: these run inside server
+// components, where the runtime zone is the server's (UTC on Vercel).
 
+/**
+ * The football day a game belongs to, always in US Eastern.
+ *
+ * This groups the pick board into sections, so it has to produce the same
+ * answer on the server and in the browser — a viewer-local day would regroup
+ * the list on hydration. Kickoff times themselves render in the viewer's own
+ * zone via <LocalTime>.
+ */
 export function formatDay(iso: string): string {
-  return new Date(iso).toLocaleDateString(undefined, {
+  return new Date(iso).toLocaleDateString("en-US", {
     weekday: "long",
     month: "long",
     day: "numeric",
-  });
-}
-
-export function formatTime(iso: string): string {
-  return new Date(iso).toLocaleTimeString(undefined, {
-    hour: "numeric",
-    minute: "2-digit",
+    timeZone: "America/New_York",
   });
 }
 

@@ -3,7 +3,8 @@
 import { useActionState, useState } from "react";
 import { TeamChip } from "@/components/TeamChip";
 import { Badge } from "@/components/Badge";
-import { formatDay, formatTime, POINTS_PER_PICK } from "@/lib/format";
+import { formatDay, POINTS_PER_PICK } from "@/lib/format";
+import { LocalTime } from "@/components/LocalTime";
 import { submitPicksAction } from "../actions";
 import type { ActionState } from "../actions";
 
@@ -195,7 +196,7 @@ function GameRow({
     ? "Final"
     : game.status === "in_progress"
       ? (game.status_detail ?? "In progress")
-      : formatTime(game.start_time);
+      : null;
 
   // What this game did to your week, once it is out of reach.
   const outcome = !game.locked
@@ -227,7 +228,9 @@ function GameRow({
           fontSize: "0.76rem",
         }}
       >
-        <span className="muted">{detail}</span>
+        <span className="muted">
+          {detail ?? <LocalTime iso={game.start_time} mode="time" />}
+        </span>
         {game.neutral_site ? <Badge tone="muted">Neutral</Badge> : null}
         {game.broadcast ? <span className="muted">· {game.broadcast}</span> : null}
         {game.odds_details ? <span className="muted">· {game.odds_details}</span> : null}

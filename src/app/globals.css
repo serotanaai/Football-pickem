@@ -153,3 +153,19 @@ td {
 tr:last-child td {
   border-bottom: none;
 }
+
+.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Wide tables scroll inside their own container, never the page body. */
+.scroll-x {
+  overflow-x: auto;
+}
+
+.note {
+  font-size: 0.8rem;
+  color: var(--muted);
+  margin: 0.55rem 0 0;
+}
