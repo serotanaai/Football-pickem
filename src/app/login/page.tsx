@@ -11,6 +11,10 @@ export default async function LoginPage({
   const params = await searchParams;
   const next = params.next && params.next.startsWith("/") ? params.next : "/dashboard";
 
+  // An invite link has to send you through sign-in first. Say why, so the
+  // detour reads as part of joining rather than as something going wrong.
+  const fromInvite = next.startsWith("/join/");
+
   const supabase = await createClient();
   const {
     data: { user },
@@ -31,8 +35,9 @@ export default async function LoginPage({
           🏈 PickemWeekly
         </Link>
         <p className="muted" style={{ margin: 0, textAlign: "center", maxWidth: 380 }}>
-          Weekly college football pick&apos;em with your friends — conference slates, all of
-          FBS, or just the top 25.
+          {fromInvite
+            ? "You've been invited to a pick'em league. Sign in or create an account and you'll go straight to it."
+            : "Weekly college football pick'em with your friends — conference slates, all of FBS, or just the top 25."}
         </p>
         <LoginForm next={next} initialError={params.error} />
       </div>
