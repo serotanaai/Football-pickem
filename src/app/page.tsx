@@ -13,15 +13,15 @@ const FEATURES = [
   },
   {
     title: "Weekly winners",
-    body: "One point per correct pick. Every week gets its own leaderboard and winner, and the season standings track weekly wins alongside total points.",
+    body: "100 points per correct pick. Every week gets its own leaderboard and winner, and the season standings track weekly wins alongside total points.",
   },
   {
     title: "A real playoff",
-    body: "The last weeks of the regular season become a fantasy-style bracket. Top seeds by record go head to head, and the higher seed takes a tie.",
+    body: "The last weeks of the regular season become a fantasy-style bracket. Seeds go to the members with the most weekly wins, with total points breaking ties, and the higher seed takes a tie.",
   },
   {
     title: "Picks stay secret",
-    body: "The week locks the moment its first game kicks off, and every pick reveals at once. That rule lives in the database, not just the interface.",
+    body: "Every game locks at its own kickoff, and nobody sees your pick until it does. Turn up late and you keep the games that have not started — you just forfeit the ones that have.",
   },
   {
     title: "Invite by link",

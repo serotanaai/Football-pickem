@@ -3,7 +3,7 @@
 import { useActionState, useState } from "react";
 import { TeamChip } from "@/components/TeamChip";
 import { Badge } from "@/components/Badge";
-import { formatDay, formatTime } from "@/lib/format";
+import { formatDay, formatTime, POINTS_PER_PICK } from "@/lib/format";
 import { savePicksAction } from "../actions";
 import type { ActionState } from "../actions";
 
@@ -23,7 +23,7 @@ export type PickGame = {
   winner_team_id: number | null;
   home: { id: number; school: string; display_name: string; abbreviation: string | null; logo: string | null } | null;
   away: { id: number; school: string; display_name: string; abbreviation: string | null; logo: string | null } | null;
-  started: boolean;
+  locked: boolean;
 };
 
 export function PickBoard({
@@ -32,21 +32,19 @@ export function PickBoard({
   week,
   games,
   initialPicks,
-  weekLocked,
 }: {
   leagueId: string;
   slug: string;
   week: number;
   games: PickGame[];
   initialPicks: Record<number, number>;
-  weekLocked: boolean;
 }) {
   const [picks, setPicks] = useState<Record<number, number>>(initialPicks);
   const [state, action, pending] = useActionState<ActionState, FormData>(savePicksAction, {});
 
-  // The whole week is open or shut together, so every game counts once it is open.
-  const openGames = weekLocked ? [] : games;
+  const openGames = games.filter((game) => !game.locked);
   const made = openGames.filter((game) => picks[game.id]).length;
+  const gone = games.length - openGames.length;
 
   const payload = JSON.stringify(
     openGames
@@ -87,7 +85,6 @@ export function PickBoard({
                 <GameRow
                   key={game.id}
                   game={game}
-                  locked={weekLocked}
                   picked={picks[game.id]}
                   onPick={(teamId) =>
                     setPicks((prev) => ({ ...prev, [game.id]: teamId }))
@@ -114,12 +111,20 @@ export function PickBoard({
           flexWrap: "wrap",
         }}
       >
-        <span style={{ fontSize: "0.88rem", fontWeight: 600 }}>
-          {weekLocked
-            ? `Week ${week} is locked — ${
-                games.filter((game) => picks[game.id]).length
-              } of ${games.length} picked`
-            : `${made} of ${openGames.length} ${openGames.length === 1 ? "game" : "games"} picked`}
+        <span style={{ display: "grid", gap: "0.15rem" }}>
+          <span style={{ fontSize: "0.88rem", fontWeight: 600 }}>
+            {made} of {openGames.length} open {openGames.length === 1 ? "game" : "games"} picked
+          </span>
+          <span className="muted" style={{ fontSize: "0.78rem" }}>
+            {openGames.length === 0
+              ? `Every game in week ${week} has kicked off.`
+              : `Still on the table: ${(
+                  openGames.length * POINTS_PER_PICK
+                ).toLocaleString()} points`}
+            {gone > 0
+              ? ` · ${gone} ${gone === 1 ? "game" : "games"} already kicked off`
+              : ""}
+          </span>
         </span>
 
         {state.error ? (
@@ -132,7 +137,7 @@ export function PickBoard({
         <button
           className="btn btn-primary"
           type="submit"
-          disabled={pending || weekLocked || made === 0}
+          disabled={pending || made === 0}
           style={{ marginLeft: "auto" }}
         >
           {pending ? "Saving…" : "Save picks"}
@@ -144,12 +149,10 @@ export function PickBoard({
 
 function GameRow({
   game,
-  locked,
   picked,
   onPick,
 }: {
   game: PickGame;
-  locked: boolean;
   picked: number | undefined;
   onPick: (teamId: number) => void;
 }) {
@@ -164,7 +167,7 @@ function GameRow({
       className="surface"
       style={{
         padding: "0.75rem 0.9rem",
-        opacity: locked && !picked ? 0.72 : 1,
+        opacity: game.locked && !picked ? 0.72 : 1,
       }}
     >
       <div
@@ -180,9 +183,9 @@ function GameRow({
         {game.neutral_site ? <Badge tone="muted">Neutral</Badge> : null}
         {game.broadcast ? <span className="muted">· {game.broadcast}</span> : null}
         {game.odds_details ? <span className="muted">· {game.odds_details}</span> : null}
-        {game.completed || game.started ? (
+        {game.locked ? (
           <span style={{ marginLeft: "auto" }}>
-            <Badge tone="muted">{game.completed ? "Final" : "Underway"}</Badge>
+            <Badge tone="muted">{game.completed ? "Final" : "Locked"}</Badge>
           </span>
         ) : null}
       </div>
@@ -202,7 +205,7 @@ function GameRow({
             <button
               key={team.id}
               type="button"
-              disabled={locked}
+              disabled={game.locked}
               onClick={() => onPick(team.id)}
               style={{
                 display: "flex",
@@ -212,7 +215,7 @@ function GameRow({
                 textAlign: "left",
                 padding: "0.55rem 0.65rem",
                 borderRadius: 9,
-                cursor: locked ? "default" : "pointer",
+                cursor: game.locked ? "default" : "pointer",
                 background: selected ? "var(--accent-soft)" : "transparent",
                 border: `1.5px solid ${selected ? "var(--accent)" : "var(--border)"}`,
                 color: lost ? "var(--muted)" : "var(--text)",

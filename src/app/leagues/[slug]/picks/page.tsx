@@ -1,9 +1,9 @@
 import { Suspense } from "react";
 import { Badge } from "@/components/Badge";
-import { ensureWeekBoard, isWeekLocked } from "@/lib/board";
+import { ensureWeekBoard, isLocked } from "@/lib/board";
 import { createClient } from "@/lib/supabase/server";
 import { loadLeague, parseWeek, resolveCurrentWeek, weekRange } from "@/lib/league";
-import { formatKickoff, scopeLabel } from "@/lib/format";
+import { formatKickoff, POINTS_PER_PICK, scopeLabel } from "@/lib/format";
 import { WeekPicker } from "../WeekPicker";
 import { PickBoard, type PickGame } from "./PickBoard";
 
@@ -46,8 +46,6 @@ export default async function PicksPage({
       ).data?.name
     : null;
 
-  const weekLocked = isWeekLocked(leagueWeek);
-
   const boardGames: PickGame[] = games.map((game) => ({
     id: game.id,
     start_time: game.start_time,
@@ -64,7 +62,7 @@ export default async function PicksPage({
     winner_team_id: game.winner_team_id,
     home: game.home,
     away: game.away,
-    started: new Date(game.start_time).getTime() <= Date.now(),
+    locked: isLocked(game),
   }));
 
   return (
@@ -88,17 +86,9 @@ export default async function PicksPage({
             {leagueWeek?.is_playoff ? <Badge tone="muted">Playoff week</Badge> : null}
           </div>
           {leagueWeek?.lock_at ? (
-            <p
-              className={weekLocked ? undefined : "muted"}
-              style={{
-                margin: "0.3rem 0 0",
-                fontSize: "0.85rem",
-                color: weekLocked ? "var(--danger)" : undefined,
-              }}
-            >
-              {weekLocked
-                ? `Picks closed at first kickoff, ${formatKickoff(leagueWeek.lock_at)}.`
-                : `All picks lock at the first kickoff — ${formatKickoff(leagueWeek.lock_at)}.`}
+            <p className="muted" style={{ margin: "0.3rem 0 0", fontSize: "0.85rem" }}>
+              First kickoff {formatKickoff(leagueWeek.lock_at)}. Every game locks at its own
+              kickoff, and each correct pick is worth {POINTS_PER_PICK} points.
             </p>
           ) : null}
         </div>
@@ -127,7 +117,6 @@ export default async function PicksPage({
           week={week}
           games={boardGames}
           initialPicks={initialPicks}
-          weekLocked={weekLocked}
         />
       )}
     </div>

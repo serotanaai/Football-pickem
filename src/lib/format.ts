@@ -1,5 +1,8 @@
 import type { LeagueScope } from "@/lib/database.types";
 
+/** Points awarded for one correct pick. */
+export const POINTS_PER_PICK = 100;
+
 export function scopeLabel(scope: LeagueScope, conferenceName?: string | null): string {
   switch (scope) {
     case "conference":

@@ -45,7 +45,7 @@ export default async function LeagueOverviewPage({
         weeklyWins: row?.weekly_wins ?? 0,
       };
     })
-    .sort((a, b) => b.points - a.points || b.weeklyWins - a.weeklyWins);
+    .sort((a, b) => b.weeklyWins - a.weeklyWins || b.points - a.points);
 
   const lastCompletedWeek = (weekly ?? []).find((row) => row.week < week)?.week ?? null;
   const lastWinners = lastCompletedWeek
@@ -122,9 +122,9 @@ export default async function LeagueOverviewPage({
               <tr>
                 <th style={{ width: 44 }}>#</th>
                 <th>Member</th>
+                <th style={{ textAlign: "right" }}>Week wins</th>
                 <th style={{ textAlign: "right" }}>Points</th>
                 <th style={{ textAlign: "right" }}>Record</th>
-                <th style={{ textAlign: "right" }}>Week wins</th>
               </tr>
             </thead>
             <tbody>
@@ -142,7 +142,10 @@ export default async function LeagueOverviewPage({
                     ) : null}
                   </td>
                   <td style={{ textAlign: "right", fontVariantNumeric: "tabular-nums" }}>
-                    <strong>{row.points}</strong>
+                    <strong>{row.weeklyWins}</strong>
+                  </td>
+                  <td style={{ textAlign: "right", fontVariantNumeric: "tabular-nums" }}>
+                    {row.points.toLocaleString()}
                   </td>
                   <td
                     className="muted"
@@ -150,16 +153,14 @@ export default async function LeagueOverviewPage({
                   >
                     {row.correct}–{row.incorrect}
                   </td>
-                  <td style={{ textAlign: "right", fontVariantNumeric: "tabular-nums" }}>
-                    {row.weeklyWins}
-                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
         <p className="muted" style={{ fontSize: "0.8rem", margin: "0.55rem 0 0" }}>
-          One point per correct pick. Totals only count games that have kicked off, so an
+          100 points per correct pick. Ordered the way the playoff bracket seeds: weekly wins
+          first, total points breaking ties. Totals only count games that have kicked off, so an
           in-progress week fills in as it goes.
         </p>
       </section>

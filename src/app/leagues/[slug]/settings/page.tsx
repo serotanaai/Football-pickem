@@ -171,7 +171,8 @@ export default async function SettingsPage({
           </table>
         </div>
         <p className="note">
-          Every pick in a week locks together, the moment that week&apos;s first game kicks off.
+          Each game locks at its own kickoff, and a correct pick is worth 100 points. Members
+          who pick late keep every game that has not started yet.
         </p>
       </section>
 

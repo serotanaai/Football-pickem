@@ -122,7 +122,7 @@ export function SeedPlayoffsForm({
       <p className="muted" style={{ margin: 0, fontSize: "0.85rem" }}>
         {alreadySeeded
           ? "Re-seeding wipes the current bracket and rebuilds it from the standings as they are now."
-          : `Locks in the top ${playoffTeams} members by regular-season points and builds the bracket.`}
+          : `Locks in the top ${playoffTeams} members by weekly wins (total points break ties) and builds the bracket.`}
       </p>
 
       <Feedback state={state} />

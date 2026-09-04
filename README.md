@@ -33,17 +33,19 @@ top-25 slate follows the poll as it moves.
 `conference` and `all_fbs` slates are FBS-on-FBS only. A `top25` slate keeps a ranked team's
 game even when the opponent is FCS — otherwise September boards would have holes in them.
 
-**Picks.** One point per correct pick, straight up — no spreads. **A week locks as a whole
-the moment its first game kicks off** — so nobody can watch the noon games and then fill in
-their night slate — and every pick in that week reveals at the same moment. Both rules live in
-Postgres (a trigger and a row-level-security policy), not in the interface, so they hold even
-against direct API access.
+**Picks.** **100 points per correct pick**, straight up — no spreads. **Each game locks at its
+own kickoff.** You can keep submitting picks through the week right up until the last game
+starts, but every game that has already begun is gone: turn up after 5 of 10 games have
+kicked off and the most you can win that week is 500. A pick reveals to the rest of the league
+at the same moment it locks. Both rules live in Postgres (a trigger and a row-level-security
+policy), not in the interface, so they hold even against direct API access.
 
 **Weekly results.** Every week has its own leaderboard and winner. Season standings track
 total points, record and weekly wins.
 
 **Playoffs.** Set a field of 2, 4 or 8. When the regular season ends the commissioner seeds
-the bracket from regular-season points; the following weeks become head-to-head matchups on
+the bracket on **weekly wins, with cumulative points breaking ties** — weekly wins act as the
+W-L record, total points as points-for; the following weeks become head-to-head matchups on
 that week's picks. The higher seed wins a tie. Winners advance automatically once every game
 on a round's slate is final.
 
@@ -129,7 +131,7 @@ so the platform's `Authorization: Bearer` header is accepted.
 ```
 ESPN scoreboard ──▶ /api/sync/games ──▶ games, teams, rankings
                                           │
-                                          ├─▶ grade_picks()          one point per correct pick
+                                          ├─▶ grade_picks()          100 points per correct pick
                                           ├─▶ generate_week_board()  tops up each league's slate
                                           └─▶ advance_playoffs()     settles finished bracket rounds
 ```
@@ -143,11 +145,11 @@ rules hold no matter what talks to the database:
 | `join_league_by_code` | Redeems an invite link |
 | `generate_week_board` | Builds a week's slate from its scope, capped at `max_games_per_week` |
 | `grade_picks` | Marks picks correct or wrong once a game is final |
-| `seed_playoffs` | Seeds the bracket from regular-season points |
+| `seed_playoffs` | Seeds the bracket on weekly wins, then cumulative points |
 | `advance_playoffs` | Scores a round and builds the next one |
 
-The `validate_pick` trigger rejects any pick placed after the week has locked, on a team that
-is not in the game, or on a game that is not on that league's slate for the week.
+The `validate_pick` trigger rejects any pick placed after that game has kicked off, on a team
+that is not in the game, or on a game that is not on that league's slate for the week.
 `freeze_league_slate` stops the slate, conference or season changing once picks exist.
 
 ### ESPN endpoints

@@ -120,10 +120,9 @@ export async function loadMembers(leagueId: string): Promise<Member[]> {
 }
 
 /**
- * A week locks as a whole the moment its first game kicks off, so a pick made
- * late in the week cannot be informed by an earlier result.
+ * Each game locks at its own kickoff. Someone picking late keeps every game
+ * that has not started — they only forfeit the ones that have.
  */
-export function isWeekLocked(leagueWeek: Pick<Tables<"league_weeks">, "lock_at"> | null): boolean {
-  if (!leagueWeek?.lock_at) return false;
-  return new Date(leagueWeek.lock_at).getTime() <= Date.now();
+export function isLocked(game: Pick<Tables<"games">, "start_time">): boolean {
+  return new Date(game.start_time).getTime() <= Date.now();
 }

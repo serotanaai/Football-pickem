@@ -3,7 +3,7 @@ import { Badge } from "@/components/Badge";
 import { TeamChip } from "@/components/TeamChip";
 import { createClient } from "@/lib/supabase/server";
 import { loadLeague, parseWeek, resolveCurrentWeek, weekRange } from "@/lib/league";
-import { isWeekLocked, loadMembers, loadWeekBoard } from "@/lib/board";
+import { isLocked, loadMembers, loadWeekBoard } from "@/lib/board";
 import { ordinal } from "@/lib/format";
 import { WeekPicker } from "../WeekPicker";
 
@@ -55,9 +55,8 @@ export default async function ResultsPage({
 
   const anyGraded = board.games.some((game) => game.completed);
   const winners = rows.filter((row) => row.rank === 1 && row.points > 0);
-  // Every pick in a week reveals together, the moment the week locks.
-  const revealed = isWeekLocked(board.leagueWeek);
-  const shownGames = revealed ? board.games : [];
+  // A pick reveals when its own game kicks off, matching how it locked.
+  const shownGames = board.games.filter((game) => isLocked(game));
 
   return (
     <div>
@@ -96,7 +95,7 @@ export default async function ResultsPage({
           <Badge tone="accent">🏆 Week {week} winner</Badge>
           <strong>{winners.map((w) => w.name).join(" and ")}</strong>
           <span className="muted" style={{ fontSize: "0.88rem" }}>
-            {winners[0].points} {winners[0].points === 1 ? "point" : "points"}
+            {winners[0].points.toLocaleString()} points
             {winners.length > 1 ? " (tied)" : ""}
           </span>
         </div>
@@ -118,7 +117,7 @@ export default async function ResultsPage({
                 <td className="muted">{ordinal(index + 1)}</td>
                 <td style={{ fontWeight: row.user_id === userId ? 700 : 500 }}>{row.name}</td>
                 <td style={{ textAlign: "right", fontVariantNumeric: "tabular-nums" }}>
-                  <strong>{row.points}</strong>
+                  <strong>{row.points.toLocaleString()}</strong>
                 </td>
                 <td
                   className="muted"
@@ -136,8 +135,8 @@ export default async function ResultsPage({
       {shownGames.length === 0 ? (
         <div className="surface" style={{ padding: "1.5rem", textAlign: "center" }}>
           <p className="muted" style={{ margin: 0, fontSize: "0.9rem" }}>
-            Picks stay hidden until the week locks at its first kickoff. Week {week} has not
-            started yet.
+            Picks stay hidden until each game kicks off. Nothing in week {week} has started
+            yet.
           </p>
         </div>
       ) : (

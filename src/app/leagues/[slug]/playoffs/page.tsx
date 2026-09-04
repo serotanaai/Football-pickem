@@ -45,11 +45,15 @@ export default async function PlayoffsPage({
 
   if (!matchups || matchups.length === 0) {
     const projected = members
-      .map((member) => ({
-        ...member,
-        points: (standings ?? []).find((s) => s.user_id === member.user_id)?.points ?? 0,
-      }))
-      .sort((a, b) => b.points - a.points)
+      .map((member) => {
+        const row = (standings ?? []).find((s) => s.user_id === member.user_id);
+        return {
+          ...member,
+          points: row?.points ?? 0,
+          weeklyWins: row?.weekly_wins ?? 0,
+        };
+      })
+      .sort((a, b) => b.weeklyWins - a.weeklyWins || b.points - a.points)
       .slice(0, league.playoff_teams);
 
     return (
@@ -57,7 +61,7 @@ export default async function PlayoffsPage({
         <div className="surface" style={{ padding: "1.25rem" }}>
           <h2 style={{ fontSize: "1rem", margin: "0 0 0.35rem" }}>Bracket not seeded yet</h2>
           <p className="muted" style={{ margin: 0, fontSize: "0.9rem" }}>
-            The top {league.playoff_teams} members by regular-season points make a{" "}
+            The top {league.playoff_teams} members by weekly wins make a{" "}
             {rounds}-week bracket starting in week {league.regular_season_end_week + 1}. The
             commissioner seeds it once week {league.regular_season_end_week} is final.
           </p>
@@ -78,6 +82,7 @@ export default async function PlayoffsPage({
                 <tr>
                   <th style={{ width: 60 }}>Seed</th>
                   <th>Member</th>
+                  <th style={{ textAlign: "right" }}>Week wins</th>
                   <th style={{ textAlign: "right" }}>Points</th>
                 </tr>
               </thead>
@@ -89,7 +94,13 @@ export default async function PlayoffsPage({
                       {member.name}
                     </td>
                     <td style={{ textAlign: "right", fontVariantNumeric: "tabular-nums" }}>
-                      {member.points}
+                      <strong>{member.weeklyWins}</strong>
+                    </td>
+                    <td
+                      className="muted"
+                      style={{ textAlign: "right", fontVariantNumeric: "tabular-nums" }}
+                    >
+                      {member.points.toLocaleString()}
                     </td>
                   </tr>
                 ))}
@@ -221,8 +232,9 @@ export default async function PlayoffsPage({
       </div>
 
       <p className="muted" style={{ fontSize: "0.8rem", margin: 0 }}>
-        Seeds come from regular-season points through week {league.regular_season_end_week}. Each
-        round is a head-to-head on that week&apos;s picks, and a tie goes to the higher seed.
+        Seeds come from weekly wins through week {league.regular_season_end_week}, with total
+        points breaking ties. Each round is a head-to-head on that week&apos;s picks, and a tie
+        goes to the higher seed.
       </p>
     </div>
   );
