@@ -116,8 +116,8 @@ export default async function PicksPage({
           <p className="muted" style={{ margin: "0 0 1.25rem", fontSize: "0.9rem" }}>
             You submitted {submission.pick_count}{" "}
             {submission.pick_count === 1 ? "pick" : "picks"} on{" "}
-            <LocalTime iso={submission.submitted_at} />. Picks are final once submitted, so there is
-            nothing left to change this week.
+            <LocalTime iso={submission.submitted_at} />. They are final now — your card for the week
+            is below, and scores fill in as the games finish.
           </p>
           <Link className="btn btn-primary" href={`/leagues/${slug}`}>
             Back to league overview
@@ -125,7 +125,7 @@ export default async function PicksPage({
         </div>
       ) : null}
 
-      {submission ? null : boardGames.length === 0 ? (
+      {boardGames.length === 0 ? (
         <div className="surface" style={{ padding: "2.25rem 1.5rem", textAlign: "center" }}>
           <p style={{ margin: "0 0 0.4rem", fontWeight: 600 }}>No games on this week&apos;s slate yet.</p>
           <p className="muted" style={{ margin: 0, fontSize: "0.9rem" }}>
@@ -140,8 +140,17 @@ export default async function PicksPage({
           week={week}
           games={boardGames}
           initialPicks={initialPicks}
+          submitted={submission !== null}
         />
       )}
+
+      {submission && boardGames.length > 0 ? (
+        <div style={{ marginTop: "1.5rem" }}>
+          <Link className="btn btn-primary" href={`/leagues/${slug}`}>
+            Back to league overview
+          </Link>
+        </div>
+      ) : null}
     </div>
   );
 }
