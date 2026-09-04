@@ -1,4 +1,5 @@
 import { Badge } from "@/components/Badge";
+import { Reveal } from "@/components/Reveal";
 import { LocalTime } from "@/components/LocalTime";
 import { teamFill, teamInk } from "@/lib/teamColor";
 
@@ -148,35 +149,36 @@ export function WeekMatchups({
         const awayWidth = split ? clampShare(row.away.pct) : 50;
 
         return (
-          <div
-            key={row.id}
-            className="glass matchup"
-            style={{ "--shine-delay": `${(index % 6) * 1.1}s` } as React.CSSProperties}
-          >
-            <div className="matchup-meta">
-              <span className="muted">
-                {label ?? <LocalTime iso={row.startTime} mode="kickoff" showZone />}
-              </span>
-              {row.broadcast ? <span className="muted">· {row.broadcast}</span> : null}
-              {row.neutralSite ? <Badge tone="muted">Neutral</Badge> : null}
-              <span style={{ marginLeft: "auto", display: "flex", gap: "0.35rem" }}>
-                {row.status === "in_progress" ? <Badge tone="accent">Live</Badge> : null}
-                {!row.myTeamId ? <Badge tone="muted">No pick</Badge> : null}
-              </span>
-            </div>
+          <Reveal key={row.id} delay={Math.min(index, 8) * 55}>
+            <div
+              className="glass matchup surface-hover"
+              style={{ "--shine-delay": `${(index % 6) * 1.1}s` } as React.CSSProperties}
+            >
+              <div className="matchup-meta">
+                <span className="muted">
+                  {label ?? <LocalTime iso={row.startTime} mode="kickoff" showZone />}
+                </span>
+                {row.broadcast ? <span className="muted">· {row.broadcast}</span> : null}
+                {row.neutralSite ? <Badge tone="muted">Neutral</Badge> : null}
+                <span style={{ marginLeft: "auto", display: "flex", gap: "0.35rem" }}>
+                  {row.status === "in_progress" ? <Badge tone="accent">Live</Badge> : null}
+                  {!row.myTeamId ? <Badge tone="muted">No pick</Badge> : null}
+                </span>
+              </div>
 
-            <div className={`tug${split ? " is-split" : ""}`}>
-              <TeamSide side={row.away} row={row} home={false} width={awayWidth} />
-              <TeamSide side={row.home} row={row} home width={100 - awayWidth} />
-            </div>
+              <div className={`tug${split ? " is-split" : ""}`}>
+                <TeamSide side={row.away} row={row} home={false} width={awayWidth} />
+                <TeamSide side={row.home} row={row} home width={100 - awayWidth} />
+              </div>
 
-            {split && row.totalPicks < memberCount ? (
-              <p className="note" style={{ fontSize: "0.72rem" }}>
-                {memberCount - row.totalPicks} of {memberCount}{" "}
-                {memberCount - row.totalPicks === 1 ? "member" : "members"} had no pick here.
-              </p>
-            ) : null}
-          </div>
+              {split && row.totalPicks < memberCount ? (
+                <p className="note" style={{ fontSize: "0.72rem" }}>
+                  {memberCount - row.totalPicks} of {memberCount}{" "}
+                  {memberCount - row.totalPicks === 1 ? "member" : "members"} had no pick here.
+                </p>
+              ) : null}
+            </div>
+          </Reveal>
         );
       })}
     </div>

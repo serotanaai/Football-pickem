@@ -11,13 +11,14 @@
 }
 
 :root {
-  --bg: #f6f6f4;
+  --bg: #eceeeb;
   --surface: #ffffff;
   --border: #e3e3df;
   --text: #16181c;
   --muted: #666a72;
   --accent: #256240;
   --accent-soft: #e8f2ea;
+  --accent-ink: #ffffff;
   --danger: #a3282a;
 }
 
@@ -30,6 +31,8 @@
     --muted: #9aa0a8;
     --accent: #5fbf85;
     --accent-soft: #1b2a21;
+    /* The dark accent is a light green; white on it is unreadable. */
+    --accent-ink: #0c1410;
     --danger: #e2696b;
   }
 }
@@ -49,16 +52,72 @@ body {
   color: var(--text);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
+  position: relative;
+}
+
+/* Soft colour fields the glass has something to pick up. Fixed, so the page
+   scrolls over a still ground rather than dragging the light with it. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  pointer-events: none;
+  background:
+    radial-gradient(58rem 38rem at 8% -12%, var(--glow-a), transparent 62%),
+    radial-gradient(46rem 34rem at 102% 4%, var(--glow-b), transparent 60%),
+    radial-gradient(40rem 30rem at 60% 108%, var(--glow-c), transparent 62%),
+    radial-gradient(120% 90% at 50% 40%, transparent 55%, var(--vignette) 100%),
+    var(--bg);
+}
+
+/* A little grain keeps those large gradients from banding on cheap panels,
+   and stops the glass from reading as plastic. */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: var(--grain);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
 a {
   color: inherit;
 }
 
+/* Every page already reaches for .surface, so the depth goes here rather than
+   into a new class each page would have to opt into. */
 .surface {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 12px;
+  position: relative;
+  background:
+    linear-gradient(168deg, var(--glass-top) 0%, var(--glass-bottom) 100%),
+    var(--surface);
+  border: 1px solid var(--glass-edge);
+  border-radius: 14px;
+  box-shadow:
+    inset 0 1px 0 var(--glass-lip),
+    var(--e2);
+  backdrop-filter: blur(10px) saturate(120%);
+  -webkit-backdrop-filter: blur(10px) saturate(120%);
+}
+
+/* A panel that lifts toward the pointer. Opt-in, since not every surface is
+   something you can click. */
+.surface-hover {
+  transition:
+    transform 260ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 260ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 260ms ease;
+}
+
+.surface-hover:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    inset 0 1px 0 var(--glass-lip),
+    var(--e3);
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--glass-edge));
 }
 
 .muted {
@@ -79,11 +138,30 @@ a {
   font-weight: 550;
   cursor: pointer;
   text-decoration: none;
-  transition: filter 120ms ease, border-color 120ms ease;
+  box-shadow:
+    inset 0 1px 0 var(--glass-lip),
+    var(--e1);
+  transition:
+    transform 140ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 140ms ease,
+    filter 140ms ease,
+    border-color 140ms ease;
 }
 
 .btn:hover:not(:disabled) {
   border-color: var(--accent);
+  transform: translateY(-1px);
+  box-shadow:
+    inset 0 1px 0 var(--glass-lip),
+    var(--e2);
+}
+
+/* Pressing has to travel, or the depth reads as a picture of depth. */
+.btn:active:not(:disabled) {
+  transform: translateY(1px);
+  box-shadow:
+    inset 0 2px 4px rgba(14, 18, 24, 0.16),
+    var(--e1);
 }
 
 .btn:disabled {
@@ -94,11 +172,26 @@ a {
 .btn-primary {
   background: var(--accent);
   border-color: var(--accent);
-  color: #fff;
+  color: var(--accent-ink);
+}
+
+.btn-primary {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--accent) 92%, var(--accent-ink)) 0%,
+    var(--accent) 100%
+  );
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--accent-ink) 18%, transparent),
+    var(--e2);
 }
 
 .btn-primary:hover:not(:disabled) {
-  filter: brightness(1.08);
+  filter: brightness(1.06);
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--accent-ink) 18%, transparent),
+    var(--e3),
+    0 6px 22px -8px color-mix(in srgb, var(--accent) 65%, transparent);
 }
 
 input,
@@ -111,6 +204,14 @@ textarea {
   border-radius: 9px;
   padding: 0.55rem 0.7rem;
   width: 100%;
+  box-shadow: inset 0 1px 3px rgba(14, 18, 24, 0.07);
+  transition: box-shadow 160ms ease, border-color 160ms ease;
+}
+
+input:hover,
+select:hover,
+textarea:hover {
+  border-color: color-mix(in srgb, var(--accent) 35%, var(--border));
 }
 
 input:focus,
@@ -195,6 +296,28 @@ tr:last-child td {
   --glass-edge: rgba(18, 22, 28, 0.1);
   --glass-shine: rgba(255, 255, 255, 0.55);
   --glass-lip: rgba(255, 255, 255, 0.9);
+
+  /* Depth is a stack, not a single blur: a tight contact shadow that anchors
+     the element, then a broad diffuse one that lifts it off the page. */
+  --e1:
+    0 1px 1px rgba(14, 18, 24, 0.05),
+    0 2px 6px -2px rgba(14, 18, 24, 0.08);
+  --e2:
+    0 1px 2px rgba(14, 18, 24, 0.06),
+    0 6px 14px -6px rgba(14, 18, 24, 0.14),
+    0 14px 34px -14px rgba(14, 18, 24, 0.12);
+  --e3:
+    0 2px 4px rgba(14, 18, 24, 0.07),
+    0 12px 26px -8px rgba(14, 18, 24, 0.16),
+    0 32px 64px -22px rgba(14, 18, 24, 0.2);
+
+  /* The colour behind the glass. Without something to refract, a translucent
+     panel over a flat background just looks like a flat background. */
+  --glow-a: rgba(37, 98, 64, 0.22);
+  --glow-b: rgba(58, 104, 168, 0.16);
+  --glow-c: rgba(190, 120, 60, 0.12);
+  --vignette: rgba(18, 24, 30, 0.07);
+  --grain: 0.035;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -204,6 +327,26 @@ tr:last-child td {
     --glass-edge: rgba(255, 255, 255, 0.1);
     --glass-shine: rgba(255, 255, 255, 0.14);
     --glass-lip: rgba(255, 255, 255, 0.08);
+
+    /* A shadow on a dark ground barely reads, so depth leans on the lit top
+       edge instead, with the shadow only anchoring the element. */
+    --e1:
+      0 1px 1px rgba(0, 0, 0, 0.4),
+      0 2px 8px -3px rgba(0, 0, 0, 0.5);
+    --e2:
+      0 2px 4px rgba(0, 0, 0, 0.45),
+      0 8px 20px -8px rgba(0, 0, 0, 0.6),
+      0 18px 40px -18px rgba(0, 0, 0, 0.7);
+    --e3:
+      0 4px 8px rgba(0, 0, 0, 0.5),
+      0 16px 32px -10px rgba(0, 0, 0, 0.65),
+      0 40px 72px -28px rgba(0, 0, 0, 0.8);
+
+    --glow-a: rgba(95, 191, 133, 0.16);
+    --glow-b: rgba(78, 130, 200, 0.15);
+    --glow-c: rgba(200, 130, 70, 0.09);
+    --vignette: rgba(0, 0, 0, 0.35);
+    --grain: 0.05;
   }
 }
 
@@ -213,6 +356,24 @@ tr:last-child td {
   --glass-edge: rgba(255, 255, 255, 0.1);
   --glass-shine: rgba(255, 255, 255, 0.14);
   --glass-lip: rgba(255, 255, 255, 0.08);
+
+  --e1:
+    0 1px 1px rgba(0, 0, 0, 0.4),
+    0 2px 8px -3px rgba(0, 0, 0, 0.5);
+  --e2:
+    0 2px 4px rgba(0, 0, 0, 0.45),
+    0 8px 20px -8px rgba(0, 0, 0, 0.6),
+    0 18px 40px -18px rgba(0, 0, 0, 0.7);
+  --e3:
+    0 4px 8px rgba(0, 0, 0, 0.5),
+    0 16px 32px -10px rgba(0, 0, 0, 0.65),
+    0 40px 72px -28px rgba(0, 0, 0, 0.8);
+
+  --glow-a: rgba(95, 191, 133, 0.16);
+  --glow-b: rgba(78, 130, 200, 0.15);
+  --glow-c: rgba(200, 130, 70, 0.09);
+  --vignette: rgba(0, 0, 0, 0.35);
+  --grain: 0.05;
 }
 
 /* A slow sweep of light across the card. Staggered per card by the inline
@@ -394,4 +555,159 @@ tr:last-child td {
 @media (prefers-reduced-motion: reduce) {
   .glass::after { animation: none; opacity: 0; }
   .tug-side { transition: none; }
+}
+
+/* ============================ depth, chrome and motion ============================ */
+
+/* The header floats over the page rather than sitting in it: translucent, blurred,
+   and it grows a shadow only once there is content underneath to cast onto. */
+.app-header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: color-mix(in srgb, var(--surface) 72%, transparent);
+  border-bottom: 1px solid transparent;
+  backdrop-filter: blur(14px) saturate(160%);
+  -webkit-backdrop-filter: blur(14px) saturate(160%);
+  transition: box-shadow 260ms ease, border-color 260ms ease, background 260ms ease;
+}
+
+.app-header[data-scrolled="true"] {
+  border-bottom-color: var(--glass-edge);
+  background: color-mix(in srgb, var(--surface) 86%, transparent);
+  box-shadow: var(--e2);
+}
+
+/* Nav links get a pill that grows out of the hover rather than blinking on. */
+.nav-link {
+  position: relative;
+  padding: 0.3rem 0.6rem;
+  border-radius: 8px;
+  text-decoration: none;
+  color: var(--muted);
+  transition: color 180ms ease, background 180ms ease;
+}
+
+.nav-link:hover {
+  color: var(--text);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+
+.nav-link[aria-current="page"] {
+  color: var(--text);
+  background: var(--accent-soft);
+}
+
+/* The wordmark picks up the accent as a soft glow. */
+.brand {
+  font-weight: 750;
+  letter-spacing: -0.01em;
+  text-decoration: none;
+  background: linear-gradient(
+    100deg,
+    var(--text) 0%,
+    color-mix(in srgb, var(--accent) 70%, var(--text)) 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Rows lift very slightly under the pointer, which is enough to make a table
+   feel like a stack of things rather than a grid of text. */
+tbody tr {
+  transition: background 160ms ease, box-shadow 160ms ease;
+}
+
+tbody tr:hover {
+  background: color-mix(in srgb, var(--accent) 6%, transparent);
+}
+
+/* ------------------------------- scroll reveal ------------------------------- */
+
+/*
+ * Content is visible by default and only hidden once the inline script in the
+ * document head confirms JS is running, so a failed bundle leaves a readable
+ * page rather than an empty one.
+ */
+.js .reveal {
+  opacity: 0;
+  transform: translateY(18px) scale(0.995);
+  will-change: opacity, transform;
+  transition:
+    opacity 700ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 700ms cubic-bezier(0.22, 1, 0.36, 1);
+  transition-delay: var(--reveal-delay, 0ms);
+}
+
+.js .reveal.is-in {
+  opacity: 1;
+  transform: none;
+}
+
+/* Once it has arrived, stop reserving a compositor layer for it. */
+.js .reveal.is-settled {
+  will-change: auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .js .reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+
+  .surface-hover,
+  .btn,
+  .app-header {
+    transition: none;
+  }
+
+  .surface-hover:hover,
+  .btn:hover:not(:disabled),
+  .btn:active:not(:disabled) {
+    transform: none;
+  }
+}
+
+/* The header carries a wordmark, three links, an email and a button. On a
+   phone that is wider than the screen, so the nav gets its own line and the
+   email — which is only a reminder of who you are signed in as — steps out. */
+.app-header-inner {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 0.85rem 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.app-header-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+@media (max-width: 640px) {
+  .app-header-inner {
+    flex-wrap: wrap;
+    gap: 0.5rem 0.75rem;
+    padding: 0.7rem 1rem;
+  }
+
+  .app-header-nav {
+    order: 3;
+    width: 100%;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .app-header-nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  .app-header-email {
+    display: none;
+  }
 }

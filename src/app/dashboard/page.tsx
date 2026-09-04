@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { AppShell } from "@/components/AppShell";
 import { Badge } from "@/components/Badge";
+import { Reveal } from "@/components/Reveal";
 import { createClient } from "@/lib/supabase/server";
 import { requireUser } from "@/lib/league";
 import { ordinal, scopeBadge } from "@/lib/format";
@@ -102,43 +103,44 @@ export default async function DashboardPage() {
             gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
           }}
         >
-          {sorted.map((league) => {
+          {sorted.map((league, index) => {
             const conference = league.conference_id
               ? conferenceById.get(league.conference_id)
               : null;
             const standing = myStanding.get(league.id);
 
             return (
-              <Link
-                key={league.id}
-                href={`/leagues/${league.slug}`}
-                className="surface"
-                style={{ padding: "1.05rem 1.15rem", textDecoration: "none", display: "block" }}
-              >
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "0.5rem",
-                    marginBottom: "0.5rem",
-                    flexWrap: "wrap",
-                  }}
+              <Reveal key={league.id} delay={index * 60}>
+                <Link
+                  href={`/leagues/${league.slug}`}
+                  className="surface surface-hover"
+                  style={{ padding: "1.05rem 1.15rem", textDecoration: "none", display: "block" }}
                 >
-                  <strong style={{ fontSize: "1rem" }}>{league.name}</strong>
-                  <Badge tone="accent">{scopeBadge(league.scope, conference?.short_name)}</Badge>
-                  {roleByLeague.get(league.id) === "commissioner" ? (
-                    <Badge tone="muted">Commissioner</Badge>
-                  ) : null}
-                </div>
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.5rem",
+                      marginBottom: "0.5rem",
+                      flexWrap: "wrap",
+                    }}
+                  >
+                    <strong style={{ fontSize: "1rem" }}>{league.name}</strong>
+                    <Badge tone="accent">{scopeBadge(league.scope, conference?.short_name)}</Badge>
+                    {roleByLeague.get(league.id) === "commissioner" ? (
+                      <Badge tone="muted">Commissioner</Badge>
+                    ) : null}
+                  </div>
 
-                <p className="muted" style={{ margin: 0, fontSize: "0.85rem" }}>
-                  {league.season} season · {memberCount.get(league.id) ?? 1}{" "}
-                  {(memberCount.get(league.id) ?? 1) === 1 ? "member" : "members"}
-                  {standing
-                    ? ` · you're ${standing.place === 1 ? "leading" : ordinal(standing.place)} with ${standing.points} pts`
-                    : ""}
-                </p>
-              </Link>
+                  <p className="muted" style={{ margin: 0, fontSize: "0.85rem" }}>
+                    {league.season} season · {memberCount.get(league.id) ?? 1}{" "}
+                    {(memberCount.get(league.id) ?? 1) === 1 ? "member" : "members"}
+                    {standing
+                      ? ` · you're ${standing.place === 1 ? "leading" : ordinal(standing.place)} with ${standing.points} pts`
+                      : ""}
+                  </p>
+                </Link>
+              </Reveal>
             );
           })}
         </div>

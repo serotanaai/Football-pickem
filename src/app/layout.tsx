@@ -27,6 +27,18 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
+      <head>
+        {/*
+          Marks the document as scripted before first paint, which is what the
+          reveal styles hang off. Without it the entrance animation would start
+          from opacity 0 for people whose bundle never arrives.
+        */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `document.documentElement.classList.add('js')`,
+          }}
+        />
+      </head>
       <body>{children}</body>
     </html>
   );
