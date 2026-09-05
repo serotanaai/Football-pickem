@@ -14,7 +14,12 @@
 -- unaffected, and inserting an email on signup is a separate privilege from
 -- selecting one, so account creation is untouched.
 
-revoke select (email) on public.profiles from anon, authenticated;
+-- The table-level SELECT that Supabase grants by default covers every column,
+-- so a column-level revoke has nothing to subtract from and silently does
+-- nothing. The blanket grant has to go first, then the safe columns come back.
+revoke select on public.profiles from anon, authenticated;
+grant  select (id, display_name, avatar_url, created_at)
+  on public.profiles to anon, authenticated;
 
 /*
  * A league's roster, with addresses only where they are the reader's business.
