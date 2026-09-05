@@ -1,37 +1,39 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import Link from "next/link";
 import type { TickerGame, TickerState } from "@/lib/ticker";
+import { LocalTime } from "@/components/LocalTime";
 import {
   countdownLine,
   finalLine,
   liveLine,
+  matchupLine,
   pendingLine,
-  recapLine,
+  recapLabel,
+  recapScore,
 } from "@/lib/tickerCopy";
 
 /**
- * A single line of scoreboard, pinned to the top of the page.
+ * The scoreboard strip: a tape when there are scores, a sign when there are not.
  *
- * Two clocks run here and they run at different speeds on purpose. The
- * countdown ticks every second off a timestamp the server already sent, so it
- * stays honest without asking the network anything. Scores are the opposite —
- * they only change when the cron writes them — so they are re-fetched on a slow
- * poll and only while a game is actually on.
+ * Scores scroll, because there are a dozen of them and a bar that swaps one for
+ * another every few seconds asks the reader to wait for the game they care
+ * about. A countdown is one fact that changes once a second and holds still,
+ * because there is nothing to scroll past and motion under a headline you are
+ * trying to read is just noise.
  */
 
 const POLL_MS = 45_000;
-const ROTATE_MS = 4_500;
 const NARROW_PX = 560;
+/** Reading speed, not animation speed: the duration follows the content. */
+const PIXELS_PER_SECOND = 55;
 
 export function Ticker({ initial }: { initial: TickerState }) {
   const [state, setState] = useState(initial);
-  const [index, setIndex] = useState(0);
   const [now, setNow] = useState(() => Date.now());
 
   // Starts false so the server's markup and the first client render agree; the
-  // effect below corrects it before paint on a narrow screen.
+  // effect corrects it on a narrow screen before anything is painted.
   const [narrow, setNarrow] = useState(false);
   useEffect(() => {
     const query = window.matchMedia(`(max-width: ${NARROW_PX}px)`);
@@ -57,8 +59,8 @@ export function Ticker({ initial }: { initial: TickerState }) {
         const next = (await res.json()) as TickerState;
         if (!cancelled) setState(next);
       } catch {
-        // A failed poll leaves the last good line on screen, which is better
-        // than blanking the bar because one request lost the network.
+        // A failed poll leaves the last good tape on screen, which beats
+        // blanking the bar because one request lost the network.
       }
     };
 
@@ -80,88 +82,137 @@ export function Ticker({ initial }: { initial: TickerState }) {
   // what the bar says now rather than sitting on "under a minute".
   const kickoff = counting ? new Date(state.kickoff).getTime() : null;
   const expired = kickoff !== null && kickoff <= now;
-  const refetch = useRef(false);
+  const pending = useRef(false);
   useEffect(() => {
-    if (!expired || refetch.current) return;
-    refetch.current = true;
+    if (!expired || pending.current) return;
+    pending.current = true;
     fetch("/api/ticker", { cache: "no-store" })
       .then((res) => (res.ok ? res.json() : null))
       .then((next: TickerState | null) => {
         if (next) setState(next);
-        refetch.current = false;
+        pending.current = false;
       })
       .catch(() => {
-        refetch.current = false;
+        pending.current = false;
       });
   }, [expired]);
 
-  const games: TickerGame[] = state.kind === "live" ? state.games : [];
+  if (state.kind === "idle") return null;
 
-  // Rotation, only when there is more than one thing to rotate through.
-  useEffect(() => {
-    if (games.length < 2) return;
-    setIndex((i) => (i < games.length ? i : 0));
-    const timer = window.setInterval(() => {
-      setIndex((i) => (i + 1) % games.length);
-    }, ROTATE_MS);
-    return () => window.clearInterval(timer);
-  }, [games.length]);
+  if (state.kind === "countdown") {
+    return (
+      <Bar>
+        <span className="ticker-static">
+          <strong>{countdownLine(state.week, (kickoff ?? now) - now)}</strong>
+          {state.game ? (
+            <>
+              <Dot />
+              {matchupLine(state.game, narrow)}
+              <Dot />
+              <LocalTime iso={state.game.startTime} mode="kickoff" showZone />
+            </>
+          ) : null}
+        </span>
+      </Bar>
+    );
+  }
 
-  const line = render(state, games, index, now, narrow);
-  if (!line) return null;
+  if (state.kind === "pending") {
+    return (
+      <Bar>
+        <span className="ticker-static">{pendingLine(state.week)}</span>
+      </Bar>
+    );
+  }
+
+  const items =
+    state.kind === "live"
+      ? state.games.map((g) => ({
+          id: g.id,
+          // A game that just went final still rides the tape, but it says
+          // FINAL: calling a finished game live is a lie the bar would tell for
+          // up to an hour.
+          text: g.justFinished ? finalLine(g, narrow) : liveLine(g, narrow),
+        }))
+      : [
+          { id: -1, text: recapLabel(state.week) },
+          ...state.games.map((g: TickerGame) => ({ id: g.id, text: recapScore(g, narrow) })),
+        ];
 
   return (
+    <Bar>
+      <Marquee items={items} />
+    </Bar>
+  );
+}
+
+function Bar({ children }: { children: React.ReactNode }) {
+  return (
     <div className="ticker" role="status" aria-live="polite">
-      <div className="ticker-inner">
-        <span className="ticker-line" key={line.key}>
-          {line.text}
-        </span>
-        {line.href ? (
-          <Link className="ticker-more" href={line.href}>
-            {line.hrefLabel}
-          </Link>
-        ) : null}
-      </div>
+      <div className="ticker-inner">{children}</div>
     </div>
   );
 }
 
-type Line = { key: string; text: string; href?: string; hrefLabel?: string };
+function Dot() {
+  return <span className="ticker-dot" aria-hidden>·</span>;
+}
 
-function render(
-  state: TickerState,
-  games: TickerGame[],
-  index: number,
-  now: number,
-  narrow: boolean,
-): Line | null {
-  switch (state.kind) {
-    case "live": {
-      const game = games[Math.min(index, games.length - 1)];
-      if (!game) return null;
-      return {
-        key: `live-${game.id}`,
-        // A game that has just gone final still rides the live rotation, but it
-        // says FINAL, because calling a finished game live is a lie the bar
-        // would tell for up to an hour.
-        text: game.justFinished ? finalLine(game, narrow) : liveLine(game, narrow),
-      };
-    }
-    case "countdown":
-      return {
-        key: "countdown",
-        text: countdownLine(state.week, new Date(state.kickoff).getTime() - now),
-      };
-    case "recap":
-      return {
-        key: "recap",
-        text: recapLine(state.week, state.games, state.total, narrow),
-        href: "/join",
-        hrefLabel: "See leagues",
-      };
-    case "pending":
-      return { key: "pending", text: pendingLine(state.week) };
-    case "idle":
-      return null;
-  }
+/**
+ * The tape.
+ *
+ * The run of items is rendered twice and the pair slid left by exactly half its
+ * width, so the moment the first copy leaves the frame the second is sitting
+ * where it started and the loop is seamless. The duration is measured from the
+ * content rather than fixed, so twelve games scroll at the same reading speed
+ * as three rather than three times as fast.
+ */
+function Marquee({ items }: { items: { id: number; text: string }[] }) {
+  const run = useRef<HTMLSpanElement>(null);
+  const [seconds, setSeconds] = useState(0);
+
+  // The content itself, not the array holding it: a poll that returns the same
+  // scores rebuilds the array, and re-measuring on that would restart the
+  // animation and jump the tape back to the start.
+  const signature = items.map((i) => i.text).join("|");
+
+  useEffect(() => {
+    const measure = () => {
+      const width = run.current?.offsetWidth ?? 0;
+      setSeconds(width > 0 ? width / PIXELS_PER_SECOND : 0);
+    };
+    measure();
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, [signature]);
+
+  const copy = (
+    <span className="ticker-run" ref={run}>
+      {items.map((item) => (
+        <span className="ticker-item" key={item.id}>
+          {item.text}
+        </span>
+      ))}
+    </span>
+  );
+
+  return (
+    <div className="ticker-window">
+      <div
+        className="ticker-track"
+        style={seconds > 0 ? { animationDuration: `${seconds}s` } : undefined}
+      >
+        {copy}
+        {/* The understudy. Hidden from screen readers, which would otherwise
+            hear every score twice. */}
+        <span className="ticker-run" aria-hidden>
+          {items.map((item) => (
+            <span className="ticker-item" key={`echo-${item.id}`}>
+              {item.text}
+            </span>
+          ))}
+        </span>
+      </div>
+    </div>
+  );
 }

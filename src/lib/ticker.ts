@@ -30,7 +30,8 @@ export type TickerGame = {
 
 export type TickerState =
   | { kind: "live"; week: number; games: TickerGame[] }
-  | { kind: "countdown"; week: number; kickoff: string }
+  /** Static, and it names the game it is counting to. */
+  | { kind: "countdown"; week: number; kickoff: string; game: TickerGame | null }
   | { kind: "recap"; week: number; games: TickerGame[]; total: number }
   | { kind: "pending"; week: number }
   | { kind: "idle" };
@@ -59,6 +60,7 @@ export function byMatchupRank(a: TickerGame, b: TickerGame): number {
 
 type Row = {
   id: number;
+  week: number;
   start_time: string;
   status: string;
   completed: boolean;
@@ -100,21 +102,7 @@ export async function loadTicker(season = DEFAULT_SEASON): Promise<TickerState> 
   // teams twice and PostgREST needs the constraint spelled out to tell which
   // is which — the same reason loadWeekBoard does it this way.
   const names = await teamNames(rows);
-  const build = (row: Row): TickerGame => ({
-    id: row.id,
-    startTime: row.start_time,
-    homeTeam: names.get(row.home_team_id)?.school ?? "TBD",
-    homeAbbr: names.get(row.home_team_id)?.abbr ?? "TBD",
-    homeScore: row.home_score,
-    homeRank: row.home_rank,
-    awayTeam: names.get(row.away_team_id)?.school ?? "TBD",
-    awayAbbr: names.get(row.away_team_id)?.abbr ?? "TBD",
-    awayScore: row.away_score,
-    awayRank: row.away_rank,
-    period: row.period,
-    clock: row.clock,
-    justFinished: row.completed && now - new Date(row.updated_at).getTime() < JUST_FINISHED_MS,
-  });
+  const build = (row: Row) => toGame(row, names, now);
 
   // 1. Anything on right now wins the bar, plus whatever finished in the last
   //    hour — a score that landed ten minutes ago is still news.
@@ -126,23 +114,19 @@ export async function loadTicker(season = DEFAULT_SEASON): Promise<TickerState> 
     return { kind: "live", week, games: [...live, ...recent].map(build).sort(byMatchupRank) };
   }
 
-  // 2. Nothing on, but something still to come this week: count down to it.
-  const next = rows.find((r) => new Date(r.start_time).getTime() > now);
-  if (next) return { kind: "countdown", week, kickoff: next.start_time };
+  // 2. Nothing on, but something still to come — this week or the next one.
+  //    The countdown names its own target, so the two have to be the same game.
+  const upcoming = await firstFbsKickoff(season, new Date(now).toISOString());
+  if (upcoming) {
+    return {
+      kind: "countdown",
+      week: upcoming.week,
+      kickoff: upcoming.game.startTime,
+      game: upcoming.game,
+    };
+  }
 
-  // 3. The week is done. Once the next slate is set its countdown is the more
-  //    useful thing to say, so the finals only hold the bar until then.
-  const { data: upcoming } = await supabase
-    .from("games")
-    .select("week, start_time")
-    .eq("season", season)
-    .eq("season_type", 2)
-    .gt("start_time", new Date(now).toISOString())
-    .order("start_time", { ascending: true })
-    .limit(1)
-    .maybeSingle();
-
-  if (upcoming) return { kind: "countdown", week: upcoming.week, kickoff: upcoming.start_time };
+  // 3. Nothing left to come. The week's finals hold the bar.
 
   const finals = rows.filter((r) => r.completed);
   if (finals.length > 0) {
@@ -153,15 +137,78 @@ export async function loadTicker(season = DEFAULT_SEASON): Promise<TickerState> 
 }
 
 /**
+ * The next kickoff worth counting down to, which is not always the next
+ * kickoff.
+ *
+ * A week usually opens with an FBS side hosting an FCS one, and naming that as
+ * the game the season is waiting on undersells the week — so the search skips
+ * to the first game with FBS on both sides. The countdown then counts to the
+ * game it names, rather than to one time while showing another.
+ */
+async function firstFbsKickoff(
+  season: number,
+  afterIso: string,
+): Promise<{ week: number; game: TickerGame } | null> {
+  const supabase = await createClient();
+
+  // A window rather than the single next row, because the first few are
+  // typically the FCS matchups this is looking past.
+  const { data } = await supabase
+    .from("games")
+    .select("*")
+    .eq("season", season)
+    .eq("season_type", 2)
+    .neq("status", "canceled")
+    .gt("start_time", afterIso)
+    .order("start_time", { ascending: true })
+    .limit(60);
+
+  const rows: Row[] = data ?? [];
+  if (rows.length === 0) return null;
+
+  const teams = await teamNames(rows);
+  const isFbs = (id: number) => teams.get(id)?.isFbs === true;
+  const row = rows.find((r) => isFbs(r.home_team_id) && isFbs(r.away_team_id)) ?? rows[0];
+
+  return { week: row.week, game: toGame(row, teams, Date.now()) };
+}
+
+function toGame(row: Row, teams: TeamMap, now: number): TickerGame {
+  return {
+    id: row.id,
+    startTime: row.start_time,
+    homeTeam: teams.get(row.home_team_id)?.school ?? "TBD",
+    homeAbbr: teams.get(row.home_team_id)?.abbr ?? "TBD",
+    homeScore: row.home_score,
+    homeRank: row.home_rank,
+    awayTeam: teams.get(row.away_team_id)?.school ?? "TBD",
+    awayAbbr: teams.get(row.away_team_id)?.abbr ?? "TBD",
+    awayScore: row.away_score,
+    awayRank: row.away_rank,
+    period: row.period,
+    clock: row.clock,
+    justFinished: row.completed && now - new Date(row.updated_at).getTime() < JUST_FINISHED_MS,
+  };
+}
+
+type TeamMap = Map<number, { school: string; abbr: string; isFbs: boolean }>;
+
+/**
  * Both spellings of every name, because the bar is one line and a phone has
  * about a third of the room a laptop does — "Ohio State" there, "OSU" here.
  */
-async function teamNames(rows: Row[]): Promise<Map<number, { school: string; abbr: string }>> {
+async function teamNames(rows: Row[]): Promise<TeamMap> {
   const supabase = await createClient();
   const ids = [...new Set(rows.flatMap((r) => [r.home_team_id, r.away_team_id]))];
-  const { data } = await supabase.from("teams").select("id, school, abbreviation").in("id", ids);
+  const { data } = await supabase
+    .from("teams")
+    .select("id, school, abbreviation, is_fbs")
+    .in("id", ids);
   return new Map(
-    (data ?? []).map((t) => [t.id, { school: t.school, abbr: t.abbreviation ?? t.school }]),
+    (data ?? []).map((t) => [
+      t.id,
+      { school: t.school, abbr: t.abbreviation ?? t.school, isFbs: t.is_fbs },
+    ]),
   );
 }
 

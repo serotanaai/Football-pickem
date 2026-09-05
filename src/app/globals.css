@@ -814,45 +814,126 @@ dialog.modal[open]::backdrop {
   max-width: 940px;
   margin: 0 auto;
   padding: 0.45rem 1.25rem;
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
   font-size: 0.82rem;
   line-height: 1.3;
+  font-variant-numeric: tabular-nums;
 }
 
-.ticker-line {
-  /* One line always: a score that wraps pushes the whole page down as it
-     changes, and the bar is stuck to the top where that is most obvious. */
+/* A countdown holds still. There is one fact on the bar and it is already
+   moving once a second; sliding it as well would make it harder to read, not
+   more alive. */
+.ticker-static {
+  display: block;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  font-variant-numeric: tabular-nums;
-  animation: ticker-in 320ms ease;
 }
 
-.ticker-more {
-  margin-left: auto;
+.ticker-dot {
+  margin: 0 0.45rem;
+  color: var(--muted);
+}
+
+/* --- the tape --------------------------------------------------------------
+
+   Two identical runs of items sit side by side inside a track, and the track
+   slides left by exactly half its own width. At the end of that slide the
+   second run is standing precisely where the first began, so the animation
+   restarts on an identical frame and the seam is invisible.
+
+   The duration is set from JS off the measured width of one run, which is what
+   keeps the speed constant: a twelve-game tape takes four times as long as a
+   three-game one rather than scrolling four times faster.
+--------------------------------------------------------------------------- */
+
+.ticker-window {
+  overflow: hidden;
+  /* Fade the ends so items enter and leave rather than appearing at a hard
+     edge. Masking beats a gradient overlay here: the bar is translucent, so a
+     painted overlay would have to match a background it cannot see. */
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent,
+    #000 2.5rem,
+    #000 calc(100% - 2.5rem),
+    transparent
+  );
+  mask-image: linear-gradient(
+    to right,
+    transparent,
+    #000 2.5rem,
+    #000 calc(100% - 2.5rem),
+    transparent
+  );
+}
+
+.ticker-track {
+  display: flex;
+  width: max-content;
+  animation-name: ticker-scroll;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  /* Until JS has measured a run there is no honest duration to use, and a
+     default one would scroll at the wrong speed for one frame. */
+  animation-duration: 0s;
+}
+
+.ticker:hover .ticker-track,
+.ticker:focus-within .ticker-track {
+  animation-play-state: paused;
+}
+
+.ticker-run {
+  display: flex;
   flex: none;
-  color: var(--accent);
-  font-size: 0.78rem;
-  text-decoration: none;
+  white-space: nowrap;
 }
 
-.ticker-more:hover {
-  text-decoration: underline;
+.ticker-item {
+  padding-right: 2.25rem;
 }
 
-@keyframes ticker-in {
+.ticker-item::after {
+  content: "•";
+  color: var(--muted);
+  margin-left: 2.25rem;
+  /* The separator belongs to the gap, so the last item of a run is spaced from
+     the first item of the next exactly like any other pair. */
+  position: relative;
+  left: 1.125rem;
+}
+
+@keyframes ticker-scroll {
   from {
-    opacity: 0;
-    transform: translateY(3px);
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
   }
 }
 
+/* Motion is the whole point of a tape, so with it switched off the tape stops
+   being one: the animation is dropped and the row becomes something the reader
+   scrolls themselves. */
 @media (prefers-reduced-motion: reduce) {
-  .ticker-line {
+  .ticker-track {
     animation: none;
+  }
+
+  .ticker-window {
+    overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
+
+  .ticker-window::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* The second run is decoration for an animation that is no longer running. */
+  .ticker-track > .ticker-run[aria-hidden] {
+    display: none;
   }
 }
 
@@ -860,11 +941,16 @@ dialog.modal[open]::backdrop {
   .ticker-inner {
     padding: 0.4rem 1rem;
     font-size: 0.76rem;
-    gap: 0.5rem;
   }
 
-  /* On a phone the link is chrome the line needs more than the reader does. */
-  .ticker-more {
-    display: none;
+  .ticker-item,
+  .ticker-item::after {
+    padding-right: 1.5rem;
+    margin-left: 1.5rem;
+  }
+
+  .ticker-item::after {
+    left: 0.75rem;
+    padding-right: 0;
   }
 }

@@ -45,6 +45,13 @@ export function countdownLine(week: number, msRemaining: number): string {
   return `Week ${week} kicks off in ${countdownParts(msRemaining)}`;
 }
 
+/** The game a countdown is counting to, named rather than just timed. */
+export function matchupLine(game: TickerGame, short = false): string {
+  const home = short ? game.homeAbbr : game.homeTeam;
+  const away = short ? game.awayAbbr : game.awayTeam;
+  return `${rankPrefix(game.awayRank)}${away} at ${rankPrefix(game.homeRank)}${home}`;
+}
+
 /**
  * `short` swaps full school names for their abbreviations. Same sentence, same
  * data — a narrow screen just cannot hold "Ohio State 21, Texas 17 — 3rd 4:22"
@@ -81,18 +88,24 @@ export function periodLabel(period: number): string {
   return period === 5 ? "OT" : `${period - 4}OT`;
 }
 
-/** The two best matchups of a finished week, then a count of the rest. */
-export function recapLine(week: number, games: TickerGame[], total: number, short = false): string {
-  const shown = games
-    .slice(0, 2)
-    .map((g) => {
-      const home = short ? g.homeAbbr : g.homeTeam;
-      const away = short ? g.awayAbbr : g.awayTeam;
-      return `${home} ${g.homeScore ?? 0} — ${away} ${g.awayScore ?? 0}`;
-    })
-    .join(" · ");
-  const rest = total - Math.min(2, games.length);
-  return `Week ${week} final: ${shown}${rest > 0 ? ` · +${rest} more` : ""}`;
+/**
+ * The label a week's finals scroll behind.
+ *
+ * The scores themselves are separate items in the tape rather than two of them
+ * packed into this string: a marquee is not short of room, so there is nothing
+ * to truncate and no "+N more" to write.
+ */
+export function recapLabel(week: number): string {
+  return `Week ${week} final`;
+}
+
+/** One finished game, as it appears in a week's recap tape. */
+export function recapScore(game: TickerGame, short = false): string {
+  const home = short ? game.homeAbbr : game.homeTeam;
+  const away = short ? game.awayAbbr : game.awayTeam;
+  return `${rankPrefix(game.homeRank)}${home} ${game.homeScore ?? 0} — ${rankPrefix(
+    game.awayRank,
+  )}${away} ${game.awayScore ?? 0}`;
 }
 
 export function pendingLine(week: number): string {
