@@ -85,6 +85,8 @@ export interface Database {
           away_rank: number | null;
           status: GameState;
           completed: boolean;
+          period: number | null;
+          clock: string | null;
           winner_team_id: number | null;
           status_detail: string | null;
           venue: string | null;
@@ -111,6 +113,8 @@ export interface Database {
           away_rank?: number | null;
           status?: GameState;
           completed?: boolean;
+          period?: number | null;
+          clock?: string | null;
           winner_team_id?: number | null;
           status_detail?: string | null;
           venue?: string | null;
@@ -452,6 +456,7 @@ export interface Database {
         }[];
       };
       leave_league: { Args: { p_league_id: string }; Returns: undefined };
+      platform_picks_count: { Args: { p_season: number }; Returns: number };
       generate_week_board: {
         Args: { p_league_id: string; p_week: number; p_reset?: boolean };
         Returns: number;

@@ -790,3 +790,81 @@ dialog.modal[open]::backdrop {
     animation: none;
   }
 }
+
+/* ---------------------------------------------------------------------------
+   Scoreboard ticker
+
+   One line, pinned to the top, and nothing else. It sits above the page rather
+   than inside it so it survives a scroll, and it is deliberately plain: it is
+   competing with a headline directly underneath, and a bar with its own border,
+   shadow and background would win that fight.
+--------------------------------------------------------------------------- */
+
+.ticker {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  background: color-mix(in srgb, var(--surface) 82%, transparent);
+  border-bottom: 1px solid var(--glass-edge);
+  backdrop-filter: blur(10px) saturate(120%);
+  -webkit-backdrop-filter: blur(10px) saturate(120%);
+}
+
+.ticker-inner {
+  max-width: 940px;
+  margin: 0 auto;
+  padding: 0.45rem 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.82rem;
+  line-height: 1.3;
+}
+
+.ticker-line {
+  /* One line always: a score that wraps pushes the whole page down as it
+     changes, and the bar is stuck to the top where that is most obvious. */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-variant-numeric: tabular-nums;
+  animation: ticker-in 320ms ease;
+}
+
+.ticker-more {
+  margin-left: auto;
+  flex: none;
+  color: var(--accent);
+  font-size: 0.78rem;
+  text-decoration: none;
+}
+
+.ticker-more:hover {
+  text-decoration: underline;
+}
+
+@keyframes ticker-in {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ticker-line {
+    animation: none;
+  }
+}
+
+@media (max-width: 560px) {
+  .ticker-inner {
+    padding: 0.4rem 1rem;
+    font-size: 0.76rem;
+    gap: 0.5rem;
+  }
+
+  /* On a phone the link is chrome the line needs more than the reader does. */
+  .ticker-more {
+    display: none;
+  }
+}
