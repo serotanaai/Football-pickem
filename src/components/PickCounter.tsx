@@ -1,27 +1,29 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { Odometer } from "@/components/Odometer";
 
 /**
  * The picks total, counting up while the page is open.
  *
- * Three things move it, and they are layered so it only ever goes up.
+ * The number is handed straight to the odometer, which does the animating in
+ * CSS. Nothing here interpolates between values — that job moved into the digit
+ * columns, and it had to: a transition restarted on every animation frame never
+ * finishes, so the two approaches cannot both be running.
  *
- * On arrival it rolls from zero to the real total, the way a flip board
- * settles. Then it keeps climbing on its own — a batch every couple of seconds,
- * so the page reads as somewhere people are actively playing rather than a
- * static poster. Underneath both, it keeps asking the server what the real total
- * is, and takes that as a floor: if the truth ever overtakes the climb, the
- * counter jumps to the truth rather than lagging behind it.
+ * Three things move it, layered so it only ever goes up. It rolls up from zero
+ * on arrival. It climbs on its own, a batch every couple of seconds, so the page
+ * reads as somewhere people are playing rather than a static poster. And it
+ * keeps asking the server for the real total, which acts as a floor: if the
+ * truth overtakes the climb, the counter jumps to the truth.
  *
  * The climb is a presentation choice, not a measurement. It restarts from the
- * real total on every load, which is what keeps it from wandering off — but it
- * does mean somebody who leaves and comes back sees a lower number than the one
- * they left. That is the cost of the effect and it is worth knowing about.
+ * real total on every load, which is what keeps it from wandering off — and does
+ * mean somebody who leaves and comes back sees a lower number than the one they
+ * left.
  */
 
 const POLL_MS = 15_000;
-const ROLL_MS = 1_100;
 
 /** A batch of this many picks arrives every few seconds. */
 const STEP_MIN = 10;
@@ -31,95 +33,52 @@ const GAP_MAX_MS = 3_000;
 
 const between = (min: number, max: number) => min + Math.random() * (max - min);
 
-/** Fast out of the gate, easing into the value. */
-function easeOut(t: number): number {
-  return 1 - Math.pow(1 - t, 3);
-}
-
 export function PickCounter({ initial }: { initial: number }) {
   // Server and first client render agree on the real number, so the markup
   // matches and someone with JavaScript off still reads a true total.
-  const [target, setTarget] = useState(initial);
-  const [shown, setShown] = useState(initial);
-  const from = useRef(0);
+  const [value, setValue] = useState(initial);
 
-  // Whatever the database last said. The climb is measured against this so a
-  // real surge is never undone by the animation catching up to a stale value.
-  const truth = useRef(initial);
-
-  const reduced = useRef(false);
+  // The opening roll: every column starts at zero and climbs to the real total.
+  // Skipped under reduced motion, where the number simply is what it is.
+  const [booted, setBooted] = useState(false);
   useEffect(() => {
-    reduced.current = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  }, []);
-
-  // Roll to each new target: from zero on arrival, from wherever it is after.
-  useEffect(() => {
-    if (reduced.current) {
-      setShown(target);
-      from.current = target;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      setBooted(true);
       return;
     }
-
-    const start = performance.now();
-    const origin = from.current;
-    const distance = target - origin;
-    if (distance === 0) return;
-
-    // A batch of fifteen should land in a moment; the opening roll from zero is
-    // the one that deserves the full second.
-    const duration = origin === 0 ? ROLL_MS : 600;
-
-    let frame = 0;
-    const step = (nowMs: number) => {
-      const t = Math.min(1, (nowMs - start) / duration);
-      setShown(Math.round(origin + distance * easeOut(t)));
-      if (t < 1) frame = requestAnimationFrame(step);
-      else from.current = target;
-    };
-    frame = requestAnimationFrame(step);
+    const frame = requestAnimationFrame(() => setBooted(true));
     return () => cancelAnimationFrame(frame);
-  }, [target]);
+  }, []);
 
   // The climb. An irregular gap and an irregular batch, because a counter that
   // adds exactly fifteen every exactly two seconds reads as a metronome.
   useEffect(() => {
     let timer = 0;
-
     const tick = () => {
-      setTarget((current) => {
-        from.current = current;
-        return current + Math.round(between(STEP_MIN, STEP_MAX));
-      });
+      setValue((current) => current + Math.round(between(STEP_MIN, STEP_MAX)));
       timer = window.setTimeout(tick, between(GAP_MIN_MS, GAP_MAX_MS));
     };
-
     timer = window.setTimeout(tick, between(GAP_MIN_MS, GAP_MAX_MS));
     return () => window.clearTimeout(timer);
   }, []);
 
   // The floor. Never drags the number down — a counter that goes backwards is
   // worse than one that is merely ahead of itself.
+  const truth = useRef(initial);
   useEffect(() => {
     let cancelled = false;
-
     const pull = async () => {
       try {
         const res = await fetch("/api/picks-count", { cache: "no-store" });
         if (!res.ok) return;
         const data = (await res.json()) as { count?: number };
         if (cancelled || typeof data.count !== "number") return;
-
         truth.current = data.count;
-        setTarget((current) => {
-          if (data.count! <= current) return current;
-          from.current = current;
-          return data.count!;
-        });
+        setValue((current) => Math.max(current, data.count!));
       } catch {
         // Leave the last known total on screen rather than blanking it.
       }
     };
-
     const timer = window.setInterval(pull, POLL_MS);
     return () => {
       cancelled = true;
@@ -127,9 +86,19 @@ export function PickCounter({ initial }: { initial: number }) {
     };
   }, []);
 
+  // Zero, padded to the width of the real number, so the columns are all in
+  // place before they start climbing and nothing reflows mid-roll.
+  const zeroed = Number(value.toLocaleString().replace(/\d/g, "0").replace(/\D/g, "")) || 0;
+
   return (
     <p className="pick-count">
-      <strong suppressHydrationWarning>{shown.toLocaleString()}</strong> picks made this season
+      <strong>
+        <Odometer value={booted ? value : zeroed} />
+        {/* The odometer is a stack of digit strips; this is the number itself,
+            for anything reading the page rather than looking at it. */}
+        <span className="sr-only">{value.toLocaleString()}</span>
+      </strong>{" "}
+      picks made this season
     </p>
   );
 }
