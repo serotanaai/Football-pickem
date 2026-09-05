@@ -140,7 +140,7 @@ export async function updateLeagueAction(
       max_games_per_week: maxGames,
       regular_season_end_week: endWeek,
       playoff_teams: playoffTeams,
-      is_public: formData.get("is_public") === "on",
+      is_public: formData.get("is_public") === "public",
     })
     .eq("id", leagueId);
 

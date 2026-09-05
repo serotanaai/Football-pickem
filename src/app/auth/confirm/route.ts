@@ -7,7 +7,9 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const tokenHash = url.searchParams.get("token_hash");
   const type = url.searchParams.get("type") as EmailOtpType | null;
-  const next = url.searchParams.get("next") ?? "/dashboard";
+  // Confirming a brand-new account lands on the Join page rather than an empty
+  // dashboard. Whatever the link says still wins — an invite says /join/<code>.
+  const next = url.searchParams.get("next") ?? (type === "signup" ? "/join" : "/dashboard");
 
   if (tokenHash && type) {
     const supabase = await createClient();

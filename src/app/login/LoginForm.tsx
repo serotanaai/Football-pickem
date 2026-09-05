@@ -15,7 +15,15 @@ type FormError = {
   links?: { href: string; label: string }[];
 };
 
-export function LoginForm({ next, initialError }: { next: string; initialError?: string }) {
+export function LoginForm({
+  next,
+  signupNext,
+  initialError,
+}: {
+  next: string;
+  signupNext: string;
+  initialError?: string;
+}) {
   const router = useRouter();
   const [mode, setMode] = useState<Mode>("signup");
   const [email, setEmail] = useState("");
@@ -50,10 +58,13 @@ export function LoginForm({ next, initialError }: { next: string; initialError?:
     };
   }, [name, mode]);
 
-  const redirectTo =
+  // Where the confirmation or magic link lands. Signing up goes somewhere of
+  // its own, and the link is sent long before we know when it gets clicked, so
+  // the destination has to be baked into it here.
+  const callbackTo = (target: string) =>
     typeof window === "undefined"
       ? undefined
-      : `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`;
+      : `${window.location.origin}/auth/callback?next=${encodeURIComponent(target)}`;
 
   function switchMode(to: Mode) {
     setMode(to);
@@ -74,7 +85,7 @@ export function LoginForm({ next, initialError }: { next: string; initialError?:
       if (mode === "magic") {
         const { error } = await supabase.auth.signInWithOtp({
           email,
-          options: { emailRedirectTo: redirectTo },
+          options: { emailRedirectTo: callbackTo(next) },
         });
         if (error) throw error;
         setNotice(`Sign-in link sent to ${email}. Check your inbox.`);
@@ -145,7 +156,7 @@ export function LoginForm({ next, initialError }: { next: string; initialError?:
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
-        options: { emailRedirectTo: redirectTo, data: { display_name: handle } },
+        options: { emailRedirectTo: callbackTo(signupNext), data: { display_name: handle } },
       });
 
       if (error) {
@@ -176,7 +187,7 @@ export function LoginForm({ next, initialError }: { next: string; initialError?:
       }
 
       if (data.session) {
-        router.push(next);
+        router.push(signupNext);
         router.refresh();
       } else {
         setNotice(`Almost there — confirm your account with the link we sent to ${email}.`);

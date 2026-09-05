@@ -49,8 +49,10 @@ export async function createLeagueAction(
   });
 
   // create_league has a fixed signature, so the listing choice is applied
-  // straight after rather than threaded through it.
-  if (!error && data && formData.get("is_public") === "on") {
+  // straight after rather than threaded through it. The column starts false,
+  // so a new public league is one write behind its own creation; if that write
+  // fails the league is merely unlisted, which is the harmless direction.
+  if (!error && data && formData.get("is_public") !== "private") {
     await supabase.from("leagues").update({ is_public: true }).eq("id", data.id);
   }
 

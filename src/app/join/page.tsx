@@ -59,7 +59,7 @@ export default async function JoinPage({
   return (
     <AppShell email={user.email}>
       <h1 style={{ fontSize: "1.4rem", margin: "0 0 0.35rem", letterSpacing: "-0.02em" }}>
-        Add a league
+        Join a league
       </h1>
       <p className="muted" style={{ margin: "0 0 1.5rem", fontSize: "0.92rem" }}>
         {atCap
@@ -102,7 +102,7 @@ export default async function JoinPage({
         <LeaderboardCard
           title="Top leagues"
           caption="Open leagues by total points"
-          empty="No league is listed publicly yet. Make yours open in its settings and it will show up here."
+          empty="No public league has been scored yet this season."
           delay={140}
           rows={(leagueBoard.data ?? []).map((row) => ({
             label: row.name,
