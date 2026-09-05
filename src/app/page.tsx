@@ -73,7 +73,7 @@ export default async function HomePage() {
         </h1>
 
         <p className="muted" style={{ fontSize: "1.05rem", maxWidth: "58ch", margin: "0 0 1.25rem" }}>
-          Custom slates, live scores, and weekly leaderboards — free to join.
+          The best teams, live scores, and weekly leaderboards — free to join.
         </p>
 
         {/* Whatever the database says at render time, and it keeps asking. */}
@@ -99,9 +99,7 @@ export default async function HomePage() {
           </Link>
         </div>
 
-        <p className="note" style={{ margin: "0.7rem 0 2.25rem" }}>
-          Free to join — no card, no trial.
-        </p>
+        <p className="join-now">Join now!</p>
 
         {/* The bar the whole app is built around, so the pitch shows the product
             rather than describing it.
