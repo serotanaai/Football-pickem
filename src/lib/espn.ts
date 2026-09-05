@@ -91,6 +91,9 @@ type EspnCompetition = {
 };
 
 type EspnStatus = {
+  // Period and clock sit on the status itself, not on status.type.
+  period?: number;
+  displayClock?: string;
   type?: {
     name?: string;
     state?: "pre" | "in" | "post";
@@ -160,6 +163,8 @@ export type NormalizedGame = {
   away_rank: number | null;
   status: GameState;
   completed: boolean;
+  period: number | null;
+  clock: string | null;
   winner_team_id: number | null;
   status_detail: string | null;
   venue: string | null;
@@ -284,7 +289,8 @@ export async function fetchWeekGames(
       if (team) teams.set(team.id, team);
     }
 
-    const { status, completed } = mapStatus(competition.status ?? event.status);
+    const liveStatus = competition.status ?? event.status;
+    const { status, completed } = mapStatus(liveStatus);
     const homeScore = score(home);
     const awayScore = score(away);
 
@@ -315,6 +321,11 @@ export async function fetchWeekGames(
       away_rank: rank(away),
       status,
       completed,
+      // Only meaningful while a game is on: ESPN keeps sending the last values
+      // after a final, and a ticker that says "4th 0:00" next to a final score
+      // is worse than one that says nothing.
+      period: status === "in_progress" ? (liveStatus?.period ?? null) : null,
+      clock: status === "in_progress" ? (liveStatus?.displayClock ?? null) : null,
       winner_team_id: winner,
       status_detail:
         competition.status?.type?.shortDetail ?? event.status?.type?.shortDetail ?? null,

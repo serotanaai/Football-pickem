@@ -790,3 +790,408 @@ dialog.modal[open]::backdrop {
     animation: none;
   }
 }
+
+/* ---------------------------------------------------------------------------
+   Scoreboard ticker
+
+   One line, pinned to the top, and nothing else. It sits above the page rather
+   than inside it so it survives a scroll, and it is deliberately plain: it is
+   competing with a headline directly underneath, and a bar with its own border,
+   shadow and background would win that fight.
+--------------------------------------------------------------------------- */
+
+.ticker {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  background: color-mix(in srgb, var(--surface) 82%, transparent);
+  border-bottom: 1px solid var(--glass-edge);
+  backdrop-filter: blur(10px) saturate(120%);
+  -webkit-backdrop-filter: blur(10px) saturate(120%);
+}
+
+.ticker-inner {
+  max-width: 940px;
+  margin: 0 auto;
+  padding: 0.45rem 1.25rem;
+  font-size: 0.82rem;
+  line-height: 1.3;
+  font-variant-numeric: tabular-nums;
+}
+
+/* A countdown holds still. There is one fact on the bar and it is already
+   moving once a second; sliding it as well would make it harder to read, not
+   more alive. */
+.ticker-static {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ticker-dot {
+  margin: 0 0.45rem;
+  color: var(--muted);
+}
+
+/* --- the tape --------------------------------------------------------------
+
+   Two identical runs of items sit side by side inside a track, and the track
+   slides left by exactly half its own width. At the end of that slide the
+   second run is standing precisely where the first began, so the animation
+   restarts on an identical frame and the seam is invisible.
+
+   The duration is set from JS off the measured width of one run, which is what
+   keeps the speed constant: a twelve-game tape takes four times as long as a
+   three-game one rather than scrolling four times faster.
+--------------------------------------------------------------------------- */
+
+.ticker-window {
+  overflow: hidden;
+  /* Fade the ends so items enter and leave rather than appearing at a hard
+     edge. Masking beats a gradient overlay here: the bar is translucent, so a
+     painted overlay would have to match a background it cannot see. */
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent,
+    #000 2.5rem,
+    #000 calc(100% - 2.5rem),
+    transparent
+  );
+  mask-image: linear-gradient(
+    to right,
+    transparent,
+    #000 2.5rem,
+    #000 calc(100% - 2.5rem),
+    transparent
+  );
+}
+
+.ticker-track {
+  display: flex;
+  width: max-content;
+  animation-name: ticker-scroll;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  /* Until JS has measured a run there is no honest duration to use, and a
+     default one would scroll at the wrong speed for one frame. */
+  animation-duration: 0s;
+}
+
+.ticker:hover .ticker-track,
+.ticker:focus-within .ticker-track {
+  animation-play-state: paused;
+}
+
+.ticker-run {
+  display: flex;
+  flex: none;
+  white-space: nowrap;
+}
+
+.ticker-item {
+  padding-right: 2.25rem;
+  flex: none;
+}
+
+.ticker-item::after {
+  content: "•";
+  color: var(--muted);
+  margin-left: 2.25rem;
+  /* The separator belongs to the gap, so the last item of a run is spaced from
+     the first item of the next exactly like any other pair. */
+  position: relative;
+  left: 1.125rem;
+}
+
+/* --- inside one score -----------------------------------------------------
+
+   The row is drawn from parts rather than set as a sentence, so a crest can sit
+   against the team it belongs to. Everything here is sized in fixed units: the
+   tape measures one run to set its own scroll duration, and anything that
+   changes width after that measurement — a crest arriving late, a proportional
+   digit — would leave the animation running at a length the content no longer
+   has, and the seam would drift open.
+--------------------------------------------------------------------------- */
+
+.ticker-score {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  white-space: nowrap;
+}
+
+.ticker-crest {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+  flex: none;
+  /* A reserved box, so the row is its final width before a single logo has
+     loaded and the measurement above is right from the first frame. */
+}
+
+/* Plenty of crests are dark marks on a transparent field, which all but
+   disappear on a dark bar. A pale disc behind them is what a broadcast ticker
+   does for the same reason, and at this size it reads as part of the mark. */
+:root:not([data-theme="light"]) .ticker-crest {
+  background: rgba(255, 255, 255, 0.92);
+  border-radius: 50%;
+  padding: 1px;
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) .ticker-crest {
+    background: none;
+    padding: 0;
+  }
+}
+
+:root[data-theme="dark"] .ticker-crest {
+  background: rgba(255, 255, 255, 0.92);
+  border-radius: 50%;
+  padding: 1px;
+}
+
+.ticker-tag {
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.02rem 0.28rem;
+  margin-right: 0.15rem;
+}
+
+.ticker-tag.is-live {
+  color: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 45%, transparent);
+}
+
+.ticker-rank {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--muted);
+  margin-right: -0.1rem;
+}
+
+/* One team: crest, rank, name, score, and any punctuation that follows. It is
+   its own flex line so the row's gap falls between the two sides rather than
+   between every token inside one. */
+.ticker-num {
+  white-space: nowrap;
+}
+
+.ticker-side {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+  white-space: nowrap;
+}
+
+.ticker-clock {
+  color: var(--muted);
+  margin-left: 0.35rem;
+}
+
+.ticker-clock::before {
+  content: "— ";
+}
+
+/* The badge that punctuates the run.
+   
+   It has to read as a label rather than as one more score, so it takes the one
+   piece of colour on the bar and a shape nothing else there has. Its own box is
+   the separation, so it drops the bullet that sits between scores — a badge
+   with a bullet either side reads as an item in the list it is heading. */
+.ticker-item.is-badge {
+  color: var(--accent);
+  font-weight: 700;
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+  background: var(--accent-soft);
+  border-radius: 999px;
+  /* Its own padding replaces the item padding that spaces the scores apart, so
+     the gap after it has to come back as a margin or the first score of the
+     group sits flush against the pill. */
+  padding: 0.1rem 0.6rem;
+  margin-right: 1.5rem;
+  align-self: center;
+}
+
+.ticker-item.is-badge::after {
+  content: none;
+}
+
+@keyframes ticker-scroll {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+/* Motion is the whole point of a tape, so with it switched off the tape stops
+   being one: the animation is dropped and the row becomes something the reader
+   scrolls themselves. */
+@media (prefers-reduced-motion: reduce) {
+  .ticker-track {
+    animation: none;
+  }
+
+  .ticker-window {
+    overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
+
+  .ticker-window::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* The second run is decoration for an animation that is no longer running. */
+  .ticker-track > .ticker-run[aria-hidden] {
+    display: none;
+  }
+}
+
+@media (max-width: 560px) {
+  .ticker-inner {
+    padding: 0.4rem 1rem;
+    font-size: 0.76rem;
+  }
+
+  .ticker-crest {
+    width: 15px;
+    height: 15px;
+  }
+
+  .ticker-item,
+  .ticker-item::after {
+    padding-right: 1.5rem;
+    margin-left: 1.5rem;
+  }
+
+  .ticker-item::after {
+    left: 0.75rem;
+    padding-right: 0;
+  }
+}
+
+/* The picks counter. Bigger than body copy because it is the one number on the
+   page doing any persuading, with the figure itself carrying the weight. */
+.pick-count {
+  margin: 0 0 1.9rem;
+  font-size: 1rem;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.pick-count strong {
+  font-size: 1.45rem;
+  font-weight: 750;
+  letter-spacing: -0.02em;
+  color: var(--accent);
+  margin-right: 0.3rem;
+  /* Digits change width as they roll; tabular figures keep the line from
+     twitching while the number counts up. */
+  font-variant-numeric: tabular-nums;
+}
+
+/* Marks a mocked-up card as one. Quiet enough not to fight the card, plain
+   enough that nobody has to hunt for it. */
+.tag-example {
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.02rem 0.3rem;
+  margin-right: 0.15rem;
+}
+
+/* --- odometer -------------------------------------------------------------
+
+   Each digit is a window one cell tall onto a strip of numerals that slides
+   upward. The transition on the strip is the animation; nothing drives it frame
+   by frame from JavaScript.
+
+   The cell is deliberately taller than the type. At exactly 1em the numerals
+   painted outside their line box and the digit above showed as a sliver along
+   the top edge of every column, so the pitch is set once here and the strip is
+   moved in multiples of it rather than in ems.
+--------------------------------------------------------------------------- */
+
+.odo {
+  --cell: 1.25em;
+  display: inline-flex;
+  align-items: baseline;
+  /* Every numeral the same width, or the columns would shuffle sideways as the
+     digits change and the roll would read as a wobble. */
+  font-variant-numeric: tabular-nums;
+}
+
+.odo-col {
+  display: inline-block;
+  overflow: hidden;
+  height: var(--cell);
+  /* The box is taller than the glyphs, so it hangs below the baseline by the
+     difference unless it is pulled back up. */
+  vertical-align: baseline;
+  margin-bottom: -0.28em;
+}
+
+.odo-strip {
+  display: block;
+  transform: translateY(calc(var(--pos, 0) * var(--cell) * -1));
+  transition: transform 620ms cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform;
+}
+
+.odo-cell {
+  display: block;
+  height: var(--cell);
+  line-height: var(--cell);
+}
+
+.odo-sep {
+  display: inline-block;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .odo-strip {
+    transition: none;
+  }
+}
+
+/* Text for a screen reader and nothing else: clipped to a single pixel rather
+   than hidden, because display:none and visibility:hidden are both skipped by
+   assistive technology as well as by eyes. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Sits under the buttons where the fine print used to. It is an invitation
+   rather than a footnote, so it takes the accent and a little weight — but
+   stays smaller than the button beside it, which is the thing to press. */
+.join-now {
+  margin: 0.8rem 0 2.25rem;
+  font-size: 0.95rem;
+  font-weight: 650;
+  color: var(--accent);
+  letter-spacing: -0.01em;
+}
