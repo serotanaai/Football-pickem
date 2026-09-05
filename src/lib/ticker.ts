@@ -16,10 +16,12 @@ export type TickerGame = {
   startTime: string;
   homeTeam: string;
   homeAbbr: string;
+  homeLogo: string | null;
   homeScore: number | null;
   homeRank: number | null;
   awayTeam: string;
   awayAbbr: string;
+  awayLogo: string | null;
   awayScore: number | null;
   awayRank: number | null;
   period: number | null;
@@ -179,10 +181,12 @@ function toGame(row: Row, teams: TeamMap, now: number): TickerGame {
     startTime: row.start_time,
     homeTeam: teams.get(row.home_team_id)?.school ?? "TBD",
     homeAbbr: teams.get(row.home_team_id)?.abbr ?? "TBD",
+    homeLogo: teams.get(row.home_team_id)?.logo ?? null,
     homeScore: row.home_score,
     homeRank: row.home_rank,
     awayTeam: teams.get(row.away_team_id)?.school ?? "TBD",
     awayAbbr: teams.get(row.away_team_id)?.abbr ?? "TBD",
+    awayLogo: teams.get(row.away_team_id)?.logo ?? null,
     awayScore: row.away_score,
     awayRank: row.away_rank,
     period: row.period,
@@ -191,7 +195,10 @@ function toGame(row: Row, teams: TeamMap, now: number): TickerGame {
   };
 }
 
-type TeamMap = Map<number, { school: string; abbr: string; isFbs: boolean }>;
+type TeamMap = Map<
+  number,
+  { school: string; abbr: string; logo: string | null; isFbs: boolean }
+>;
 
 /**
  * Both spellings of every name, because the bar is one line and a phone has
@@ -202,12 +209,12 @@ async function teamNames(rows: Row[]): Promise<TeamMap> {
   const ids = [...new Set(rows.flatMap((r) => [r.home_team_id, r.away_team_id]))];
   const { data } = await supabase
     .from("teams")
-    .select("id, school, abbreviation, is_fbs")
+    .select("id, school, abbreviation, logo, is_fbs")
     .in("id", ids);
   return new Map(
     (data ?? []).map((t) => [
       t.id,
-      { school: t.school, abbr: t.abbreviation ?? t.school, isFbs: t.is_fbs },
+      { school: t.school, abbr: t.abbreviation ?? t.school, logo: t.logo, isFbs: t.is_fbs },
     ]),
   );
 }

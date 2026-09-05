@@ -904,6 +904,100 @@ dialog.modal[open]::backdrop {
   left: 1.125rem;
 }
 
+/* --- inside one score -----------------------------------------------------
+
+   The row is drawn from parts rather than set as a sentence, so a crest can sit
+   against the team it belongs to. Everything here is sized in fixed units: the
+   tape measures one run to set its own scroll duration, and anything that
+   changes width after that measurement — a crest arriving late, a proportional
+   digit — would leave the animation running at a length the content no longer
+   has, and the seam would drift open.
+--------------------------------------------------------------------------- */
+
+.ticker-score {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  white-space: nowrap;
+}
+
+.ticker-crest {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+  flex: none;
+  /* A reserved box, so the row is its final width before a single logo has
+     loaded and the measurement above is right from the first frame. */
+}
+
+/* Plenty of crests are dark marks on a transparent field, which all but
+   disappear on a dark bar. A pale disc behind them is what a broadcast ticker
+   does for the same reason, and at this size it reads as part of the mark. */
+:root:not([data-theme="light"]) .ticker-crest {
+  background: rgba(255, 255, 255, 0.92);
+  border-radius: 50%;
+  padding: 1px;
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) .ticker-crest {
+    background: none;
+    padding: 0;
+  }
+}
+
+:root[data-theme="dark"] .ticker-crest {
+  background: rgba(255, 255, 255, 0.92);
+  border-radius: 50%;
+  padding: 1px;
+}
+
+.ticker-tag {
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.02rem 0.28rem;
+  margin-right: 0.15rem;
+}
+
+.ticker-tag.is-live {
+  color: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 45%, transparent);
+}
+
+.ticker-rank {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--muted);
+  margin-right: -0.1rem;
+}
+
+/* One team: crest, rank, name, score, and any punctuation that follows. It is
+   its own flex line so the row's gap falls between the two sides rather than
+   between every token inside one. */
+.ticker-num {
+  white-space: nowrap;
+}
+
+.ticker-side {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+  white-space: nowrap;
+}
+
+.ticker-clock {
+  color: var(--muted);
+  margin-left: 0.35rem;
+}
+
+.ticker-clock::before {
+  content: "— ";
+}
+
 /* The badge that punctuates the run.
    
    It has to read as a label rather than as one more score, so it takes the one
@@ -969,6 +1063,11 @@ dialog.modal[open]::backdrop {
   .ticker-inner {
     padding: 0.4rem 1rem;
     font-size: 0.76rem;
+  }
+
+  .ticker-crest {
+    width: 15px;
+    height: 15px;
   }
 
   .ticker-item,

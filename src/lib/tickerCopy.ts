@@ -64,10 +64,12 @@ export function liveLine(game: TickerGame, short = false): string {
   const clock = [game.period ? periodLabel(game.period) : null, game.clock]
     .filter(Boolean)
     .join(" ");
-  const head = `🔴 LIVE — ${side(home, game.homeRank, game.homeScore)}, ${side(
-    away,
-    game.awayRank,
-    game.awayScore,
+  // Away then home, the way a scoreboard reads it: the visiting side is named
+  // first because the game is "X at Y".
+  const head = `🔴 LIVE — ${side(away, game.awayRank, game.awayScore)}, ${side(
+    home,
+    game.homeRank,
+    game.homeScore,
   )}`;
   return clock ? `${head} — ${clock}` : head;
 }
@@ -75,10 +77,10 @@ export function liveLine(game: TickerGame, short = false): string {
 export function finalLine(game: TickerGame, short = false): string {
   const home = short ? game.homeAbbr : game.homeTeam;
   const away = short ? game.awayAbbr : game.awayTeam;
-  return `FINAL — ${side(home, game.homeRank, game.homeScore)}, ${side(
-    away,
-    game.awayRank,
-    game.awayScore,
+  return `FINAL — ${side(away, game.awayRank, game.awayScore)}, ${side(
+    home,
+    game.homeRank,
+    game.homeScore,
   )}`;
 }
 
@@ -108,9 +110,9 @@ export function recapLabel(week: number): string {
 export function recapScore(game: TickerGame, short = false): string {
   const home = short ? game.homeAbbr : game.homeTeam;
   const away = short ? game.awayAbbr : game.awayTeam;
-  return `${rankPrefix(game.homeRank)}${home} ${game.homeScore ?? 0} — ${rankPrefix(
-    game.awayRank,
-  )}${away} ${game.awayScore ?? 0}`;
+  return `${rankPrefix(game.awayRank)}${away} ${game.awayScore ?? 0} — ${rankPrefix(
+    game.homeRank,
+  )}${home} ${game.homeScore ?? 0}`;
 }
 
 export function pendingLine(week: number): string {

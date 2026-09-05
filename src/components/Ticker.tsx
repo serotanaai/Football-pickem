@@ -10,6 +10,7 @@ import {
   liveLine,
   matchupLine,
   pendingLine,
+  periodLabel,
   recapLabel,
   recapScore,
 } from "@/lib/tickerCopy";
@@ -110,7 +111,14 @@ export function Ticker({ initial }: { initial: TickerState }) {
           {state.game ? (
             <>
               <Dot />
-              {matchupLine(state.game, narrow)}
+              <span aria-label={matchupLine(state.game, narrow)}>
+                <span aria-hidden>
+                  <Crest src={state.game.awayLogo} name={state.game.awayTeam} />
+                  {narrow ? state.game.awayAbbr : state.game.awayTeam} at{" "}
+                  <Crest src={state.game.homeLogo} name={state.game.homeTeam} />
+                  {narrow ? state.game.homeAbbr : state.game.homeTeam}
+                </span>
+              </span>
               <Dot />
               <LocalTime iso={state.game.startTime} mode="kickoff" showZone />
             </>
@@ -128,16 +136,24 @@ export function Ticker({ initial }: { initial: TickerState }) {
     );
   }
 
-  const scores: Item[] =
-    state.kind === "live"
-      ? state.games.map((g) => ({
-          key: `g${g.id}`,
-          // A game that just went final still rides the tape, but it says
-          // FINAL: calling a finished game live is a lie the bar would tell for
-          // up to an hour.
-          text: g.justFinished ? finalLine(g, narrow) : liveLine(g, narrow),
-        }))
-      : state.games.map((g: TickerGame) => ({ key: `g${g.id}`, text: recapScore(g, narrow) }));
+  const scores: Item[] = state.games.map((g: TickerGame) => ({
+    key: `g${g.id}`,
+    game: g,
+    // A game that just went final still rides the tape, but it says FINAL:
+    // calling a finished game live is a lie the bar would tell for up to an
+    // hour.
+    live: state.kind === "live" && !g.justFinished,
+    // The sentence stays the label even though the visual splits it around two
+    // logos, so a screen reader hears the score as a sentence rather than as
+    // fragments either side of an image.
+    text:
+      state.kind === "live"
+        ? g.justFinished
+          ? finalLine(g, narrow)
+          : liveLine(g, narrow)
+        : recapScore(g, narrow),
+    short: narrow,
+  }));
 
   const badge = state.kind === "live" ? liveLabel(state.week) : recapLabel(state.week);
 
@@ -148,7 +164,14 @@ export function Ticker({ initial }: { initial: TickerState }) {
   );
 }
 
-type Item = { key: string; text: string; badge?: true };
+type Item = {
+  key: string;
+  text: string;
+  badge?: true;
+  game?: TickerGame;
+  live?: boolean;
+  short?: boolean;
+};
 
 /**
  * A badge at the front and every few scores after it.
@@ -209,15 +232,8 @@ function Marquee({ items }: { items: Item[] }) {
     return () => window.removeEventListener("resize", measure);
   }, [signature]);
 
-  const copy = (
-    <span className="ticker-run" ref={run}>
-      {items.map((item) => (
-        <span className={item.badge ? "ticker-item is-badge" : "ticker-item"} key={item.key}>
-          {item.text}
-        </span>
-      ))}
-    </span>
-  );
+  const run1 = items.map((item) => <Cell item={item} key={item.key} />);
+  const run2 = items.map((item) => <Cell item={item} key={`echo-${item.key}`} />);
 
   return (
     <div className="ticker-window">
@@ -225,20 +241,135 @@ function Marquee({ items }: { items: Item[] }) {
         className="ticker-track"
         style={seconds > 0 ? { animationDuration: `${seconds}s` } : undefined}
       >
-        {copy}
+        <span className="ticker-run" ref={run}>
+          {run1}
+        </span>
         {/* The understudy. Hidden from screen readers, which would otherwise
             hear every score twice. */}
         <span className="ticker-run" aria-hidden>
-          {items.map((item) => (
-            <span
-              className={item.badge ? "ticker-item is-badge" : "ticker-item"}
-              key={`echo-${item.key}`}
-            >
-              {item.text}
-            </span>
-          ))}
+          {run2}
         </span>
       </div>
     </div>
+  );
+}
+
+/**
+ * One stop on the tape.
+ *
+ * A score is drawn from its parts so a crest can sit against the team it
+ * belongs to, but the label stays the whole sentence — the logos are there to
+ * be recognised at a glance, not to carry meaning nothing else carries.
+ */
+function Cell({ item }: { item: Item }) {
+  if (item.badge || !item.game) {
+    return <span className={item.badge ? "ticker-item is-badge" : "ticker-item"}>{item.text}</span>;
+  }
+
+  const g = item.game;
+  const short = item.short === true;
+
+  return (
+    <span className="ticker-item" aria-label={item.text}>
+      <span aria-hidden className="ticker-score">
+        <span className={item.live ? "ticker-tag is-live" : "ticker-tag"}>
+          {item.live ? "LIVE" : "FINAL"}
+        </span>
+        {/* Away first, home second — a game is "X at Y", and a scoreboard names
+            the visiting side first. */}
+        <Side
+          logo={g.awayLogo}
+          name={short ? g.awayAbbr : g.awayTeam}
+          full={g.awayTeam}
+          rank={g.awayRank}
+          score={g.awayScore}
+          comma
+        />
+        <Side
+          logo={g.homeLogo}
+          name={short ? g.homeAbbr : g.homeTeam}
+          full={g.homeTeam}
+          rank={g.homeRank}
+          score={g.homeScore}
+        />
+        {item.live && (g.period || g.clock) ? (
+          <span className="ticker-clock">
+            {[g.period ? periodLabel(g.period) : null, g.clock].filter(Boolean).join(" ")}
+          </span>
+        ) : null}
+      </span>
+    </span>
+  );
+}
+
+/**
+ * One team's crest, rank, name and score, as a single unit.
+ *
+ * Grouping matters for spacing rather than for structure: the row is a flex
+ * line with a gap, so left as loose tokens the gap lands between a score and
+ * the comma after it too, and the punctuation drifts away from the number it
+ * belongs to.
+ */
+function Side({
+  logo,
+  name,
+  full,
+  rank,
+  score,
+  comma,
+}: {
+  logo: string | null;
+  name: string;
+  full: string;
+  rank: number | null;
+  score: number | null;
+  comma?: boolean;
+}) {
+  return (
+    <span className="ticker-side">
+      <Crest src={logo} name={full} />
+      {rank ? <span className="ticker-rank">#{rank}</span> : null}
+      <span className="ticker-name">{name}</span>
+      {/* Score and its comma are one flex item, or the row's gap opens up
+          between the number and the punctuation that belongs to it. */}
+      <span className="ticker-num">
+        <b>{score ?? 0}</b>
+        {comma ? "," : null}
+      </span>
+    </span>
+  );
+}
+
+/**
+ * A team crest at a fixed size, always.
+ *
+ * The box is sized in CSS rather than by the image, which matters more here
+ * than it looks: the tape sets its own scroll duration from the measured width
+ * of one run, and a crest that arrives late and widens the row afterwards would
+ * leave the animation running at a length the content no longer has — the seam
+ * would drift open. A reserved box means the measurement is right before a
+ * single image has loaded.
+ */
+function Crest({ src, name }: { src: string | null; name: string }) {
+  if (!src) return null;
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      className="ticker-crest"
+      src={src}
+      alt=""
+      aria-hidden
+      width={18}
+      height={18}
+      title={name}
+      // A crest that fails to load is hidden rather than removed. Browsers draw
+      // a torn-page glyph for a broken image, and two of those per score is
+      // worse than no crest at all — but removing the element would shrink the
+      // row and desync the measured scroll, so the box stays and only the
+      // picture goes.
+      onError={(event) => {
+        event.currentTarget.style.visibility = "hidden";
+      }}
+    />
   );
 }
