@@ -400,6 +400,16 @@ export interface Database {
         Args: { p_league_id: string; p_user_id: string };
         Returns: undefined;
       };
+      league_roster: {
+        Args: { p_league_id: string };
+        Returns: {
+          user_id: string;
+          display_name: string;
+          role: "commissioner" | "member";
+          joined_at: string;
+          email: string | null;
+        }[];
+      };
       leave_league: { Args: { p_league_id: string }; Returns: undefined };
       generate_week_board: {
         Args: { p_league_id: string; p_week: number; p_reset?: boolean };

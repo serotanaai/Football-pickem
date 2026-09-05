@@ -89,34 +89,26 @@ export type Member = {
   email: string | null;
 };
 
+/**
+ * The league's roster.
+ *
+ * Read through league_roster rather than the tables, because email addresses
+ * are not every member's business: the function returns one only to the
+ * commissioner, or to the member it belongs to. Selecting profiles.email
+ * directly is no longer possible for a signed-in user at all, so the rule
+ * cannot be sidestepped by asking the API differently.
+ */
 export async function loadMembers(leagueId: string): Promise<Member[]> {
   const supabase = await createClient();
 
-  const { data: members } = await supabase
-    .from("league_members")
-    .select("user_id, role, joined_at")
-    .eq("league_id", leagueId)
-    .order("joined_at", { ascending: true });
+  const { data } = await supabase.rpc("league_roster", { p_league_id: leagueId });
 
-  const ids = (members ?? []).map((m) => m.user_id);
-  if (ids.length === 0) return [];
-
-  const { data: profiles } = await supabase
-    .from("profiles")
-    .select("id, display_name, email")
-    .in("id", ids);
-
-  const profileById = new Map((profiles ?? []).map((p) => [p.id, p]));
-
-  return (members ?? []).map((member) => {
-    const profile = profileById.get(member.user_id);
-    return {
-      user_id: member.user_id,
-      role: member.role,
-      name: profile?.display_name ?? profile?.email?.split("@")[0] ?? "Member",
-      email: profile?.email ?? null,
-    };
-  });
+  return (data ?? []).map((row) => ({
+    user_id: row.user_id,
+    role: row.role,
+    name: row.display_name,
+    email: row.email ?? null,
+  }));
 }
 
 /**
