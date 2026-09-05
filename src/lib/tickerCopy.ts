@@ -88,15 +88,20 @@ export function periodLabel(period: number): string {
   return period === 5 ? "OT" : `${period - 4}OT`;
 }
 
+/** The badge that punctuates a run of live scores. */
+export function liveLabel(week: number): string {
+  return `Week ${week} Live Scores`;
+}
+
 /**
- * The label a week's finals scroll behind.
+ * The same badge for a week that is over.
  *
  * The scores themselves are separate items in the tape rather than two of them
  * packed into this string: a marquee is not short of room, so there is nothing
  * to truncate and no "+N more" to write.
  */
 export function recapLabel(week: number): string {
-  return `Week ${week} final`;
+  return `Week ${week} Final Scores`;
 }
 
 /** One finished game, as it appears in a week's recap tape. */

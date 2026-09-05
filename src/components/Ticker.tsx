@@ -6,6 +6,7 @@ import { LocalTime } from "@/components/LocalTime";
 import {
   countdownLine,
   finalLine,
+  liveLabel,
   liveLine,
   matchupLine,
   pendingLine,
@@ -27,6 +28,8 @@ const POLL_MS = 45_000;
 const NARROW_PX = 560;
 /** Reading speed, not animation speed: the duration follows the content. */
 const PIXELS_PER_SECOND = 55;
+/** Scores between one badge and the next. */
+const GAMES_PER_BADGE = 3;
 
 export function Ticker({ initial }: { initial: TickerState }) {
   const [state, setState] = useState(initial);
@@ -125,25 +128,45 @@ export function Ticker({ initial }: { initial: TickerState }) {
     );
   }
 
-  const items =
+  const scores: Item[] =
     state.kind === "live"
       ? state.games.map((g) => ({
-          id: g.id,
+          key: `g${g.id}`,
           // A game that just went final still rides the tape, but it says
           // FINAL: calling a finished game live is a lie the bar would tell for
           // up to an hour.
           text: g.justFinished ? finalLine(g, narrow) : liveLine(g, narrow),
         }))
-      : [
-          { id: -1, text: recapLabel(state.week) },
-          ...state.games.map((g: TickerGame) => ({ id: g.id, text: recapScore(g, narrow) })),
-        ];
+      : state.games.map((g: TickerGame) => ({ key: `g${g.id}`, text: recapScore(g, narrow) }));
+
+  const badge = state.kind === "live" ? liveLabel(state.week) : recapLabel(state.week);
 
   return (
     <Bar>
-      <Marquee items={items} />
+      <Marquee items={withBadges(scores, badge)} />
     </Bar>
   );
+}
+
+type Item = { key: string; text: string; badge?: true };
+
+/**
+ * A badge at the front and every few scores after it.
+ *
+ * A tape you glance at gives you a score with no idea which week it belongs to,
+ * and a single label at the head of the run is off screen most of the time. So
+ * it repeats — often enough to always be a moment away, rarely enough not to
+ * crowd out the scores it is labelling.
+ */
+function withBadges(scores: Item[], text: string): Item[] {
+  if (scores.length === 0) return [];
+
+  const out: Item[] = [];
+  scores.forEach((item, i) => {
+    if (i % GAMES_PER_BADGE === 0) out.push({ key: `badge-${i}`, text, badge: true });
+    out.push(item);
+  });
+  return out;
 }
 
 function Bar({ children }: { children: React.ReactNode }) {
@@ -167,7 +190,7 @@ function Dot() {
  * content rather than fixed, so twelve games scroll at the same reading speed
  * as three rather than three times as fast.
  */
-function Marquee({ items }: { items: { id: number; text: string }[] }) {
+function Marquee({ items }: { items: Item[] }) {
   const run = useRef<HTMLSpanElement>(null);
   const [seconds, setSeconds] = useState(0);
 
@@ -189,7 +212,7 @@ function Marquee({ items }: { items: { id: number; text: string }[] }) {
   const copy = (
     <span className="ticker-run" ref={run}>
       {items.map((item) => (
-        <span className="ticker-item" key={item.id}>
+        <span className={item.badge ? "ticker-item is-badge" : "ticker-item"} key={item.key}>
           {item.text}
         </span>
       ))}
@@ -207,7 +230,10 @@ function Marquee({ items }: { items: { id: number; text: string }[] }) {
             hear every score twice. */}
         <span className="ticker-run" aria-hidden>
           {items.map((item) => (
-            <span className="ticker-item" key={`echo-${item.id}`}>
+            <span
+              className={item.badge ? "ticker-item is-badge" : "ticker-item"}
+              key={`echo-${item.key}`}
+            >
               {item.text}
             </span>
           ))}

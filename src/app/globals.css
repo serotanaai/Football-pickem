@@ -891,6 +891,7 @@ dialog.modal[open]::backdrop {
 
 .ticker-item {
   padding-right: 2.25rem;
+  flex: none;
 }
 
 .ticker-item::after {
@@ -901,6 +902,33 @@ dialog.modal[open]::backdrop {
      the first item of the next exactly like any other pair. */
   position: relative;
   left: 1.125rem;
+}
+
+/* The badge that punctuates the run.
+   
+   It has to read as a label rather than as one more score, so it takes the one
+   piece of colour on the bar and a shape nothing else there has. Its own box is
+   the separation, so it drops the bullet that sits between scores — a badge
+   with a bullet either side reads as an item in the list it is heading. */
+.ticker-item.is-badge {
+  color: var(--accent);
+  font-weight: 700;
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+  background: var(--accent-soft);
+  border-radius: 999px;
+  /* Its own padding replaces the item padding that spaces the scores apart, so
+     the gap after it has to come back as a margin or the first score of the
+     group sits flush against the pill. */
+  padding: 0.1rem 0.6rem;
+  margin-right: 1.5rem;
+  align-self: center;
+}
+
+.ticker-item.is-badge::after {
+  content: none;
 }
 
 @keyframes ticker-scroll {
