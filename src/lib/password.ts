@@ -38,13 +38,30 @@ export function passwordIsValid(password: string): boolean {
   return passwordRules(password).every((rule) => rule.met);
 }
 
-/** Display names are unique, so they need bounds the database agrees with. */
+/** Display names are handles: unique, lower case, and bounded. */
 export const NAME_MIN = 3;
-export const NAME_MAX = 24;
+export const NAME_MAX = 20;
 
-export function nameProblem(name: string): string | null {
-  const trimmed = name.trim();
-  if (trimmed.length < NAME_MIN) return `Display names need at least ${NAME_MIN} characters.`;
-  if (trimmed.length > NAME_MAX) return `Display names are at most ${NAME_MAX} characters.`;
+/**
+ * The handle a typed name becomes.
+ *
+ * Mirrors normalize_username() in the database, which is the one that counts —
+ * this exists so the form can show the result while it is being typed rather
+ * than surprising someone after they submit.
+ */
+export function normalizeUsername(raw: string): string {
+  return raw
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "_")
+    .replace(/[^a-z0-9_-]/g, "")
+    .slice(0, NAME_MAX);
+}
+
+/** Local checks only. Availability and language are the database's to judge. */
+export function nameProblem(raw: string): string | null {
+  const handle = normalizeUsername(raw);
+  if (handle.length < NAME_MIN) return `Display names need at least ${NAME_MIN} characters.`;
+  if (!/[a-z0-9]/.test(handle)) return "Display names need at least one letter or number.";
   return null;
 }
