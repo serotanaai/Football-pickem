@@ -2,6 +2,7 @@ import { Badge } from "@/components/Badge";
 import { Reveal } from "@/components/Reveal";
 import { LocalTime } from "@/components/LocalTime";
 import { teamFill, teamInk } from "@/lib/teamColor";
+import { periodLabel } from "@/lib/tickerCopy";
 
 export type MatchupSide = {
   teamId: number;
@@ -21,6 +22,8 @@ export type MatchupRow = {
   status: string;
   completed: boolean;
   statusDetail: string | null;
+  period: number | null;
+  clock: string | null;
   broadcast: string | null;
   neutralSite: boolean;
   winnerTeamId: number | null;
@@ -56,7 +59,12 @@ function TeamSide({
   home: boolean;
   width: number;
 }) {
-  const won = row.completed && row.winnerTeamId === side.teamId;
+  const decided = row.completed && row.winnerTeamId !== null;
+  const won = decided && row.winnerTeamId === side.teamId;
+  // Only a decided game has a loser. A game that ended in no winner — a tie, or
+  // one the feed never resolved — leaves both sides alone rather than greying
+  // out whichever happens not to be listed as the winner.
+  const lost = decided && !won;
   const mine = row.myTeamId === side.teamId;
   const showScore = side.score !== null && (row.completed || row.status === "in_progress");
   const slim = width <= 30;
@@ -65,7 +73,7 @@ function TeamSide({
     <div
       className={`tug-side${home ? " is-home" : ""}${slim ? " is-slim" : ""}${
         won ? " is-won" : ""
-      }${side.logo ? " has-logo" : ""}`}
+      }${lost ? " is-lost" : ""}${side.logo ? " has-logo" : ""}`}
       style={
         {
           width: `${width}%`,
@@ -92,15 +100,32 @@ function TeamSide({
             <span className="tug-school">{side.school}</span>
             <span className="tug-abbr">{side.abbreviation ?? side.school}</span>
           </span>
-          {won ? <span className="tug-won" title="Winner">✓</span> : null}
-          {mine ? <span className="tug-mine" title="Your pick">●</span> : null}
+          {won ? (
+            <span className="tug-won" title="Winner" aria-label="Winner">
+              W
+            </span>
+          ) : null}
+          {/* Your pick, and once the game is decided, whether it came in. */}
+          {mine ? (
+            <span
+              className={`tug-mine${decided ? (won ? " is-hit" : " is-miss") : ""}`}
+              title={decided ? (won ? "Your pick — correct" : "Your pick — wrong") : "Your pick"}
+              aria-label={
+                decided ? (won ? "Your pick, correct" : "Your pick, wrong") : "Your pick"
+              }
+            >
+              {decided ? (won ? "✓" : "✕") : "●"}
+            </span>
+          ) : null}
         </b>
         {row.revealed && row.totalPicks > 0 ? (
           <span className="tug-pct">{side.pct}%</span>
         ) : null}
       </span>
 
-      {showScore ? <strong className="tug-score">{side.score}</strong> : null}
+      {showScore ? (
+        <strong className={`tug-score${won ? " is-won" : ""}`}>{side.score}</strong>
+      ) : null}
     </div>
   );
 }
@@ -138,11 +163,12 @@ export function WeekMatchups({
       ) : null}
 
       {rows.map((row, index) => {
-        const label = row.completed
-          ? "Final"
-          : row.status === "in_progress"
-            ? (row.statusDetail ?? "Live")
-            : null;
+        const live = row.status === "in_progress";
+        // Period and clock when the feed has them, its own wording when it does
+        // not — "3rd 4:22" beats "In Progress", but neither beats nothing.
+        const clock =
+          [row.period ? periodLabel(row.period) : null, row.clock].filter(Boolean).join(" ") ||
+          row.statusDetail;
 
         const split = row.revealed && row.totalPicks > 0;
         // The bar is the split itself; with nothing to show yet it rests even.
@@ -151,17 +177,33 @@ export function WeekMatchups({
         return (
           <Reveal key={row.id} delay={Math.min(index, 8) * 55}>
             <div
-              className="glass matchup surface-hover"
+              className={`glass matchup surface-hover${live ? " is-live" : ""}${
+                row.completed ? " is-final" : ""
+              }`}
               style={{ "--shine-delay": `${(index % 6) * 1.1}s` } as React.CSSProperties}
             >
               <div className="matchup-meta">
+                {live ? (
+                  <span className="chip-live">
+                    <span className="chip-live-dot" aria-hidden />
+                    Live
+                  </span>
+                ) : row.completed ? (
+                  <span className="chip-final">Final</span>
+                ) : null}
+
                 <span className="muted">
-                  {label ?? <LocalTime iso={row.startTime} mode="kickoff" showZone />}
+                  {live
+                    ? clock
+                    : row.completed
+                      ? null
+                      : <LocalTime iso={row.startTime} mode="kickoff" showZone />}
                 </span>
-                {row.broadcast ? <span className="muted">· {row.broadcast}</span> : null}
+                {row.broadcast && !row.completed ? (
+                  <span className="muted">· {row.broadcast}</span>
+                ) : null}
                 {row.neutralSite ? <Badge tone="muted">Neutral</Badge> : null}
                 <span style={{ marginLeft: "auto", display: "flex", gap: "0.35rem" }}>
-                  {row.status === "in_progress" ? <Badge tone="accent">Live</Badge> : null}
                   {!row.myTeamId ? <Badge tone="muted">No pick</Badge> : null}
                 </span>
               </div>

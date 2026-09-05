@@ -84,6 +84,8 @@ export default async function LeagueOverviewPage({
       status: game.status,
       completed: game.completed,
       statusDetail: game.status_detail,
+      period: game.period,
+      clock: game.clock,
       broadcast: game.broadcast,
       neutralSite: game.neutral_site,
       winnerTeamId: game.winner_team_id,

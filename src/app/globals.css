@@ -474,6 +474,68 @@ tr:last-child td {
     inset 2px 0 0 rgba(255, 255, 255, 0.7);
 }
 
+/* The loser gives up its colour, so the winner is the only team on the bar
+   still wearing its own.
+
+   Neither fading nor desaturating survives contact with 118 real team colours.
+   Fading blends the fill toward the page and wrecks the contrast its ink was
+   picked for — this file made that mistake once already. Desaturating keeps the
+   fill opaque but drags bright reds, oranges and greens into the mid-grey band
+   where neither white nor near-black clears 4.5:1; measured, eight of them come
+   out below AA and the worst at 2.8:1.
+
+   So the side is repainted in the theme's own neutrals and takes the theme's
+   own text colour, which is a pairing that is already known to work in both
+   schemes and cannot be knocked out of range by whatever ESPN returns. The fill
+   is an inline style, hence the important. */
+.tug-side.is-lost {
+  background: color-mix(in srgb, var(--muted) 26%, var(--surface)) !important;
+  /* The ink is an inline custom property too, and inline wins over a
+     stylesheet — without this the side repaints grey and keeps the white text
+     that was chosen for the colour it no longer has. */
+  --ink: var(--text) !important;
+  text-shadow: none;
+}
+
+/* The crest keeps its colours. The bar says who lost; the badge still has to
+   say who it is. */
+.tug-side.is-lost .tug-logo {
+  opacity: 0.75;
+}
+
+/* The letter that says which one won. It sits in the winner's own ink on a
+   scrim of it, so it reads on any team colour without being given one. */
+.tug-won {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.05rem;
+  height: 1.05rem;
+  padding: 0 0.2rem;
+  border-radius: 4px;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  background: color-mix(in srgb, currentColor 22%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, currentColor 55%, transparent);
+  text-shadow: none;
+  flex-shrink: 0;
+}
+
+/* The winner's score carries the weight too, since on a phone the score is
+   sometimes all there is room for. */
+.tug-score.is-won {
+  font-weight: 800;
+}
+
+.tug-mine.is-hit,
+.tug-mine.is-miss {
+  font-size: 0.72rem;
+  font-weight: 800;
+  opacity: 1;
+}
+
 .tug:not(.is-split) .tug-side { opacity: 0.6; }
 .tug:not(.is-split) .tug-side.is-home {
   box-shadow: inset 2px 0 0 rgba(255, 255, 255, 0.35);
@@ -517,7 +579,6 @@ tr:last-child td {
 
 .tug-rank { font-size: 0.68rem; font-weight: 800; opacity: 0.85; flex-shrink: 0; }
 .tug-mine { font-size: 0.6rem; opacity: 0.9; flex-shrink: 0; }
-.tug-won { font-size: 0.85rem; flex-shrink: 0; }
 
 .tug-pct {
   font-size: 0.74rem;
@@ -1194,4 +1255,208 @@ dialog.modal[open]::backdrop {
   font-weight: 650;
   color: var(--accent);
   letter-spacing: -0.01em;
+}
+
+/* --- live and final, on the card itself ------------------------------------
+
+   Both have to survive a glance down a slate of a dozen games, so each gets a
+   chip at the head of the row and a mark on the card's own edge — a scanning
+   eye finds an edge before it finds a word.
+--------------------------------------------------------------------------- */
+
+.chip-live,
+.chip-final {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border-radius: 4px;
+  padding: 0.05rem 0.34rem;
+  line-height: 1.4;
+}
+
+.chip-live {
+  color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--danger) 40%, transparent);
+}
+
+.chip-final {
+  color: var(--muted);
+  background: color-mix(in srgb, var(--muted) 12%, transparent);
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+
+.chip-live-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: live-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes live-pulse {
+  50% {
+    opacity: 0.25;
+    transform: scale(0.8);
+  }
+}
+
+/* A game that is on right now is the one thing on the page worth interrupting
+   for, so its card is outlined rather than merely labelled. */
+.matchup.is-live {
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--danger) 45%, transparent),
+    0 0 0 3px color-mix(in srgb, var(--danger) 10%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chip-live-dot {
+    animation: none;
+  }
+}
+
+/* --- the pick board --------------------------------------------------------
+
+   Each game offers two tiles and you take one. Three things have to be legible
+   without reading a word: which one you took, whether it came in, and — while
+   the game is still out there — that you have chosen at all.
+--------------------------------------------------------------------------- */
+
+.pick-cell {
+  display: grid;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+/* Sits above the tile it belongs to. The empty one holds the same row height on
+   the side you did not pick, so the two tiles stay level with each other. */
+.pick-tag {
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  line-height: 1.4;
+  min-height: 1.1em;
+  padding-left: 0.15rem;
+  color: var(--accent);
+}
+
+.pick-tag.is-hit {
+  color: var(--accent);
+}
+
+.pick-tag.is-miss {
+  color: var(--danger);
+}
+
+.pick-tag.is-empty {
+  visibility: hidden;
+}
+
+.pick-tile {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  text-align: left;
+  padding: 0.55rem 0.65rem;
+  border-radius: 9px;
+  border: 1.5px solid var(--border);
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  min-width: 0;
+  cursor: pointer;
+  transition:
+    background 160ms ease,
+    border-color 160ms ease,
+    opacity 160ms ease;
+}
+
+.pick-tile:disabled {
+  cursor: default;
+}
+
+/* Picked, still out there: the accent, and the name and crest carry more
+   weight than the side you passed on. */
+.pick-tile.is-mine {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+/* Picked and right. */
+.pick-tile.is-hit {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+}
+
+/* Picked and wrong. Red is doing real work here — it is the one place on the
+   page that says you lost the points. */
+.pick-tile.is-miss {
+  border-color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 13%, transparent);
+}
+
+.pick-tile.is-mine .pick-tile-team,
+.pick-tile.is-hit .pick-tile-team,
+.pick-tile.is-miss .pick-tile-team {
+  font-weight: 750;
+}
+
+/* The crest of the team you took stays bright; the one you passed on dims, so
+   the pair reads as a choice rather than as two options. */
+.pick-tile.is-faded {
+  opacity: 0.55;
+}
+
+/* A team that lost, on a game you did not pick at all. */
+.pick-tile.is-out {
+  color: var(--muted);
+}
+
+.pick-tile-team {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+.pick-at {
+  font-size: 0.7rem;
+  flex-shrink: 0;
+}
+
+.pick-tile-right {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-shrink: 0;
+}
+
+.pick-score {
+  font-variant-numeric: tabular-nums;
+  font-size: 0.95rem;
+}
+
+.pick-score.is-won {
+  color: var(--accent);
+  font-weight: 800;
+}
+
+.pick-mark.is-won {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.05rem;
+  height: 1.05rem;
+  border-radius: 4px;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: var(--accent-ink);
+  background: var(--accent);
 }
