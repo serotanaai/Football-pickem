@@ -108,7 +108,7 @@ export function parseWeek(
 }
 
 /** Leagues one account may be in per season, mirroring the league_members trigger. */
-export const MAX_LEAGUES_PER_SEASON = 3;
+export const MAX_LEAGUES_PER_SEASON = 5;
 
 /**
  * Members one league may hold, mirroring the league_members trigger.
