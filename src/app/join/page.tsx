@@ -67,52 +67,6 @@ export default async function JoinPage({
           : "Join one that's open to anyone, paste an invite, or start your own."}
       </p>
 
-      {/* ------------------------------ standings ------------------------------ */}
-      <div
-        style={{
-          display: "grid",
-          gap: "0.85rem",
-          gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
-          marginBottom: "2rem",
-        }}
-      >
-        <LeaderboardCard
-          title={weekNumber ? `Week ${weekNumber}` : "This week"}
-          caption="Best cards of the week, everywhere"
-          empty="No games have been scored yet this week."
-          rows={weekRows.map((row) => ({
-            label: row.display_name,
-            sub: `${row.correct} correct`,
-            value: row.points.toLocaleString(),
-          }))}
-        />
-
-        <LeaderboardCard
-          title="Season leaders"
-          caption="Most points across every league"
-          empty="Nobody has been scored yet this season."
-          delay={70}
-          rows={(players.data ?? []).map((row) => ({
-            label: row.display_name,
-            sub: `${row.leagues} ${row.leagues === 1 ? "league" : "leagues"}`,
-            value: row.points.toLocaleString(),
-          }))}
-        />
-
-        <LeaderboardCard
-          title="Top leagues"
-          caption="Open leagues by total points"
-          empty="No public league has been scored yet this season."
-          delay={140}
-          rows={(leagueBoard.data ?? []).map((row) => ({
-            label: row.name,
-            sub: `${row.member_count} ${row.member_count === 1 ? "member" : "members"}`,
-            value: row.points.toLocaleString(),
-            href: `/leagues/${row.slug}`,
-          }))}
-        />
-      </div>
-
       {/* --------------------------- invite and create --------------------------- */}
       <div
         style={{
@@ -208,7 +162,7 @@ export default async function JoinPage({
           <p className="muted" style={{ margin: 0, fontSize: "0.88rem" }}>
             {search || scope !== "all"
               ? "Try a different slate, or clear the search."
-              : "Leagues are private unless their commissioner lists them. Start one and switch it on in settings to be the first."}
+              : "Start one and it shows up here — new leagues are public unless you make them private."}
           </p>
         </div>
       ) : (
@@ -270,6 +224,62 @@ export default async function JoinPage({
           })}
         </div>
       )}
+
+      {/* ------------------------------ standings ------------------------------ */}
+      {/* Below the fold on purpose: you come here to join something, and the
+          boards are what makes it worth joining rather than the way in. */}
+      <h2
+        style={{
+          fontSize: "1.05rem",
+          margin: "2.5rem 0 0.85rem",
+          letterSpacing: "-0.01em",
+        }}
+      >
+        Around the app
+      </h2>
+      <div
+        style={{
+          display: "grid",
+          gap: "0.85rem",
+          gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
+        }}
+      >
+        <LeaderboardCard
+          title={weekNumber ? `Week ${weekNumber}` : "This week"}
+          caption="Best cards of the week, everywhere"
+          empty="No games have been scored yet this week."
+          rows={weekRows.map((row) => ({
+            label: row.display_name,
+            sub: `${row.correct} correct`,
+            value: row.points.toLocaleString(),
+          }))}
+        />
+
+        <LeaderboardCard
+          title="Season leaders"
+          caption="Most points across every league"
+          empty="Nobody has been scored yet this season."
+          delay={70}
+          rows={(players.data ?? []).map((row) => ({
+            label: row.display_name,
+            sub: `${row.leagues} ${row.leagues === 1 ? "league" : "leagues"}`,
+            value: row.points.toLocaleString(),
+          }))}
+        />
+
+        <LeaderboardCard
+          title="Top leagues"
+          caption="Open leagues by total points"
+          empty="No public league has been scored yet this season."
+          delay={140}
+          rows={(leagueBoard.data ?? []).map((row) => ({
+            label: row.name,
+            sub: `${row.member_count} ${row.member_count === 1 ? "member" : "members"}`,
+            value: row.points.toLocaleString(),
+            href: `/leagues/${row.slug}`,
+          }))}
+        />
+      </div>
 
       {atCap ? (
         <div style={{ marginTop: "1.25rem" }}>
