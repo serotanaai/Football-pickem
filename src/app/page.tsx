@@ -64,18 +64,19 @@ export default async function HomePage() {
             lineHeight: 1.08,
             letterSpacing: "-0.03em",
             margin: "0 0 1rem",
-            maxWidth: "18ch",
+            // The new headline is longer; 18ch broke it over three lines and
+            // pushed the buttons down the page for no gain.
+            maxWidth: "22ch",
           }}
         >
-          College football pick&apos;em that&apos;s actually yours.
+          Join College Football&rsquo;s Best Weekly Pick &rsquo;Em.
         </h1>
 
         <p className="muted" style={{ fontSize: "1.05rem", maxWidth: "58ch", margin: "0 0 1.25rem" }}>
-          Custom slates, live scores, and weekly leaderboards — free to join, no ads, no clutter.
+          Custom slates, live scores, and weekly leaderboards — free to join.
         </p>
 
-        {/* The count is whatever the database says at render time; the sentence
-            around it changes with the size of the number, not the other way. */}
+        {/* Whatever the database says at render time. */}
         <p
           style={{
             margin: "0 0 1.75rem",
@@ -109,7 +110,7 @@ export default async function HomePage() {
         </div>
 
         <p className="note" style={{ margin: "0.7rem 0 2.25rem" }}>
-          Free to join — no card, no trial, no ads.
+          Free to join — no card, no trial.
         </p>
 
         {/* The bar the whole app is built around, so the pitch shows the product

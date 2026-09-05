@@ -113,17 +113,9 @@ export function pendingLine(week: number): string {
 }
 
 /**
- * The hero's social proof.
- *
- * Below the cutoff the wording drops the seasonal claim: "so far" is honest
- * about a number that is small because the season is young, where "this season"
- * next to a two-digit count reads as a season nobody is playing.
+ * The hero's social proof. One sentence, one number, and the number is whatever
+ * the database says at render time.
  */
-export const PICK_COUNT_THRESHOLD = 500;
-
 export function pickCountLine(count: number): string {
-  const n = count.toLocaleString();
-  return count >= PICK_COUNT_THRESHOLD
-    ? `${n} picks made this season`
-    : `${n} picks made so far`;
+  return `${count.toLocaleString()} picks made this season`;
 }
