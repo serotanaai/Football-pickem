@@ -7,6 +7,7 @@ import { scopeLabel } from "@/lib/format";
 import { LocalTime } from "@/components/LocalTime";
 import { leaveLeagueAction } from "../actions";
 import { InviteLink } from "./InviteLink";
+import { RemoveMember } from "./RemoveMember";
 import { LeagueSettingsForm, SeedPlayoffsForm } from "./CommissionerForms";
 
 export const dynamic = "force-dynamic";
@@ -92,6 +93,7 @@ export default async function SettingsPage({
               <tr>
                 <th>Member</th>
                 <th>Role</th>
+                {isCommissioner ? <th aria-label="Actions" /> : null}
               </tr>
             </thead>
             <tbody>
@@ -113,6 +115,21 @@ export default async function SettingsPage({
                       <span className="muted">Member</span>
                     )}
                   </td>
+                  {isCommissioner ? (
+                    <td style={{ textAlign: "right" }}>
+                      {/* Not on your own row, and not on another commissioner:
+                          the database refuses both, so offering them would only
+                          be a button that explains itself after the fact. */}
+                      {member.user_id === userId || member.role === "commissioner" ? null : (
+                        <RemoveMember
+                          leagueId={league.id}
+                          slug={slug}
+                          userId={member.user_id}
+                          name={member.name}
+                        />
+                      )}
+                    </td>
+                  ) : null}
                 </tr>
               ))}
             </tbody>

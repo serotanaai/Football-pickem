@@ -387,6 +387,10 @@ export interface Database {
         Returns: boolean;
       };
       regenerate_invite_code: { Args: { p_league_id: string }; Returns: string };
+      remove_league_member: {
+        Args: { p_league_id: string; p_user_id: string };
+        Returns: undefined;
+      };
       leave_league: { Args: { p_league_id: string }; Returns: undefined };
       generate_week_board: {
         Args: { p_league_id: string; p_week: number; p_reset?: boolean };
