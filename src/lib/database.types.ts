@@ -374,6 +374,14 @@ export interface Database {
         Args: { p_email: string };
         Returns: boolean;
       };
+      username_problem: {
+        Args: { p_name: string };
+        Returns: { normalized: string; problem: string | null }[];
+      };
+      normalize_username: {
+        Args: { p_name: string };
+        Returns: string;
+      };
       username_available: {
         Args: { p_name: string };
         Returns: boolean;

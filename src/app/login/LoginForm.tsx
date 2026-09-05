@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { PasswordRequirements } from "@/components/PasswordRequirements";
-import { NAME_MAX, nameProblem, passwordIsValid } from "@/lib/password";
+import { NAME_MAX, nameProblem, normalizeUsername, passwordIsValid } from "@/lib/password";
 
 type Mode = "signup" | "password" | "magic";
 
@@ -27,6 +27,28 @@ export function LoginForm({ next, initialError }: { next: string; initialError?:
     initialError ? { message: initialError } : null,
   );
   const [notice, setNotice] = useState<string | null>(null);
+  const [nameIssue, setNameIssue] = useState<string | null>(null);
+
+  // What the typed name will actually become, shown while it is being typed.
+  const handle = normalizeUsername(name);
+
+  // The database owns availability and the word list, so ask it — but only
+  // after the typing pauses, and only while the answer could still matter.
+  useEffect(() => {
+    if (mode !== "signup" || nameProblem(name)) {
+      setNameIssue(null);
+      return;
+    }
+    let cancelled = false;
+    const timer = window.setTimeout(async () => {
+      const { data } = await createClient().rpc("username_problem", { p_name: name });
+      if (!cancelled) setNameIssue(data?.[0]?.problem ?? null);
+    }, 450);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [name, mode]);
 
   const redirectTo =
     typeof window === "undefined"
@@ -87,8 +109,7 @@ export function LoginForm({ next, initialError }: { next: string; initialError?:
       }
 
       // --- signing up ---
-      const trimmedName = name.trim();
-      const badName = nameProblem(trimmedName);
+      const badName = nameProblem(name);
       if (badName) {
         setError({ message: badName });
         return;
@@ -113,23 +134,25 @@ export function LoginForm({ next, initialError }: { next: string; initialError?:
         return;
       }
 
-      const free = await supabase.rpc("username_available", { p_name: trimmedName });
-      if (free.data === false) {
-        setError({ message: `"${trimmedName}" is taken. Pick another display name.` });
+      // The raw name, not the handle: normalising strips the characters that
+      // give obfuscated names away.
+      const verdict = await supabase.rpc("username_problem", { p_name: name });
+      if (verdict.data?.[0]?.problem) {
+        setError({ message: verdict.data[0].problem });
         return;
       }
 
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
-        options: { emailRedirectTo: redirectTo, data: { display_name: trimmedName } },
+        options: { emailRedirectTo: redirectTo, data: { display_name: handle } },
       });
 
       if (error) {
         // The database refuses a duplicate name, which only happens if someone
         // took it in the seconds since the check above.
         if (/display name|Database error saving new user/i.test(error.message)) {
-          setError({ message: `"${trimmedName}" was just taken. Pick another display name.` });
+          setError({ message: `"${handle}" was just taken. Pick another display name.` });
           return;
         }
         if (/already registered|already exists/i.test(error.message)) {
@@ -207,9 +230,21 @@ export function LoginForm({ next, initialError }: { next: string; initialError?:
               maxLength={NAME_MAX}
               required
             />
-            <p className="note" style={{ margin: "0.35rem 0 0" }}>
-              Everyone in a league sees this, so it has to be unique.
-            </p>
+            {handle && handle !== name.trim() ? (
+              <p className="note" style={{ margin: "0.35rem 0 0" }}>
+                You&apos;ll appear as <strong>{handle}</strong>
+              </p>
+            ) : (
+              <p className="note" style={{ margin: "0.35rem 0 0" }}>
+                Lower case, no spaces, up to {NAME_MAX} characters. Everyone in your league sees
+                it, so it has to be unique.
+              </p>
+            )}
+            {nameIssue ? (
+              <p className="note" style={{ margin: "0.2rem 0 0", color: "var(--danger)" }}>
+                {nameIssue}
+              </p>
+            ) : null}
           </div>
         ) : null}
 
