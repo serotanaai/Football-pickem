@@ -23,23 +23,23 @@
 -- profile — running the app's own username rules over each name on the way.
 
 with candidates(n) as (values
- ('boomer_sooner'),('roll_tide_ryan'),('hokie_hank'),('buckeye_brian'),('dawg_pound_dan'),
- ('gator_gabe'),('vol_navy_vic'),('bayou_bengal'),('big_blue_ben'),('sparty_sam'),
- ('wolverine_wes'),('husker_hal'),('jayhawk_jay'),('cyclone_cy'),('horned_frog_hal'),
- ('red_raider_rob'),('sooner_sue'),('longhorn_luke'),('aggie_ace'),('razorback_ray'),
- ('tide_tyler'),('hail_state_hal'),('rebel_rick'),('war_eagle_will'),('commodore_cal'),
- ('spurs_up_gus'),('tiger_walk_ty'),('palmetto_pete'),('seminole_sean'),('hurricane_hugo'),
- ('cavalier_cody'),('tar_heel_theo'),('wolfpack_walt'),('blue_devil_bo'),('deacon_drew'),
- ('cardinal_carl'),('panther_pat'),('orange_owen'),('eagle_eddie'),('terrapin_tim'),
- ('nittany_nate'),('badger_bill'),('hawkeye_hank'),('gopher_greg'),('boiler_bo'),
- ('hoosier_hugh'),('illini_ian'),('knight_kevin'),('duck_dylan'),('beaver_bret'),
- ('husky_hutch'),('coug_cole'),('bruin_brad'),('trojan_troy'),('sun_devil_sid'),
- ('wildcat_wade'),('buffalo_bo'),('ute_ulysses'),('ram_randy'),('falcon_finn'),
- ('bronco_bryce'),('rebel_reno'),('aztec_alex'),('lobo_leo'),('zip_zack'),
- ('rocket_ronnie'),('bearcat_bart'),('shocker_shane'),('mustang_mack'),('owl_oscar'),
- ('miner_mitch'),('roadrunner_rob'),('bull_bennett'),('knights_nolan'),('memphis_marcus'),
- ('tulane_tucker'),('app_state_andy'),('coastal_chase'),('herd_harlan'),('blazer_blake'),
- ('saturday_sal'),('gameday_gina'),('kickoff_kate'),('tailgate_tess'),('bowl_week_bo')
+ ('dmoore31'),('thirdandshort'),('kellyanne_h'),('punt_god'),('rmendoza'),
+ ('saturday7'),('bandwagon'),('tjcarver'),('coldbeerclub'),('est1994'),
+ ('nakamura_p'),('overtimeagain'),('hollis22'),('the_gray_beard'),('jvillanueva'),
+ ('holdingcall'),('mbrooks_04'),('tailgatetruck'),('quietcrowd'),('sdiallo'),
+ ('fourthdown_joe'),('wrightk'),('noonkick'),('lucia_r'),('bigplayenergy'),
+ ('tannerv'),('deepball'),('okafor_e'),('redzoneonly'),('hmcallister'),
+ ('twoscoreteam'),('gsalazar'),('neverpunt'),('abbyk8'),('blitzpackage'),
+ ('tsimmons88'),('thehotseat'),('yusuf_a'),('clockmanagement'),('drewpatel'),
+ ('offsides'),('mrivas'),('bowlbound2026'),('lindseyq'),('hurryupoffense'),
+ ('cbergstrom'),('thewave'),('jrodriguez7'),('specialteams'),('omalley_k'),
+ ('lastsecondfg'),('vthomas'),('thepylon'),('nguyen_t'),('gutcall'),
+ ('sarahd12'),('chainsmoving'),('bwhitfield'),('thefumble'),('amara_o'),
+ ('onsidekick'),('rjfleming'),('backupqb'),('petrov_l'),('gametape'),
+ ('dionteb'),('thecomeback'),('khoury_m'),('wideopen'),('tessaline'),
+ ('playaction'),('jhalvorsen'),('thelateslot'),('ocampo_r'),('fieldposition'),
+ ('bmontague'),('thestreak'),('yoon_s'),('hailmary9'),('carterlin'),
+ ('nightgames'),('dubois_f'),('theunderdog'),('imani_w'),('couchcritic')
 )
 insert into auth.users (
   instance_id, id, aud, role, email, encrypted_password,
@@ -65,26 +65,30 @@ from candidates;
 -- create_league() reads auth.uid(), which is null outside a request, so the
 -- insert is written out here instead. All of them are public: a league nobody
 -- can find is not seed data, it is clutter.
+--
+-- Names carry no house style on purpose, here or in the handle list above.
+-- Eighteen leagues that all alliterate, or eighty-five handles built from one
+-- template, read as generated however plausible any single one of them is.
 
-with spec(ord, name, scope, conf, descr, owner) as (values
- (1,'SEC Saturdays','conference',8,'Every SEC game, every week.','roll_tide_ryan'),
- (2,'Big Ten Bragging Rights','conference',5,'Winner picks the tailgate spot.','buckeye_brian'),
- (3,'Big 12 Backyard','conference',4,'Wide open conference, wide open league.','longhorn_luke'),
- (4,'ACC After Dark','conference',1,'Late kicks and bad decisions.','seminole_sean'),
- (5,'Pac-12 Late Night','conference',9,'West coast games nobody else stays up for.','duck_dylan'),
- (6,'Sun Belt Slate','conference',37,'The best value in college football.','app_state_andy'),
- (7,'MAC Action','conference',15,'Weeknight football is real football.','rocket_ronnie'),
- (8,'Mountain West Weekly','conference',17,'Altitude and upsets.','bronco_bryce'),
- (9,'American Weekly','conference',151,'Every American game on the board.','bearcat_bart'),
- (10,'Top 25 Only','top25',null,'If nobody is ranked, it is not on the board.','aggie_ace'),
- (11,'Ranked Games Club','top25',null,'Just the games that move the poll.','gameday_gina'),
- (12,'Poll Watchers','top25',null,'We argue about the AP poll all week.','kickoff_kate'),
- (13,'Saturday Top 25','top25',null,'Ranked matchups, nothing else.','commodore_cal'),
- (14,'Chaos Watch','top25',null,'Here for the upsets.','wildcat_wade'),
- (15,'Full Slate Saturdays','all_fbs',null,'A fresh mix of FBS games every week.','saturday_sal'),
- (16,'Coast to Coast','all_fbs',null,'Noon kicks to west coast finishes.','tailgate_tess'),
- (17,'Tailgate League','all_fbs',null,'Loser buys wings.','bowl_week_bo'),
- (18,'Kickoff Club','all_fbs',null,'New every week, no repeats if we can help it.','husky_hutch')
+with spec(ord, name, scope, conf, descr) as (values
+ (1,'Saturdays Down South','conference',8,'Every SEC game, every week.'),
+ (2,'Cold Weather Football','conference',5,'Winner picks the tailgate spot.'),
+ (3,'Wide Open Plains','conference',4,'Nobody knows who wins this league.'),
+ (4,'Tobacco Road','conference',1,'Late kicks and bad decisions.'),
+ (5,'The Midnight Kick','conference',9,'West coast games nobody else stays up for.'),
+ (6,'The Fun Belt','conference',37,'The best value in college football.'),
+ (7,'The Tuesday Slate','conference',15,'Weeknight football is real football.'),
+ (8,'Thin Air','conference',17,'Altitude and upsets.'),
+ (9,'The Long Flight','conference',151,'Nobody travels further for a road game.'),
+ (10,'Poll Position','top25',null,'If nobody is ranked, it is not on the board.'),
+ (11,'Chaos Theory','top25',null,'Here for the games that break the bracket.'),
+ (12,'The Upset Special','top25',null,'We argue about the AP poll all week.'),
+ (13,'Top Shelf Only','top25',null,'Ranked matchups, nothing else.'),
+ (14,'Nobody Goes Undefeated','top25',null,'Somebody loses every Saturday. Guess who.'),
+ (15,'The Whole Board','all_fbs',null,'A fresh mix of FBS games every week.'),
+ (16,'Noon Kick Society','all_fbs',null,'Up early, wings by ten.'),
+ (17,'Loser Buys Wings','all_fbs',null,'The stakes are simple.'),
+ (18,'Every Snap Counts','all_fbs',null,'New slate every week, no repeats if we can help it.')
 ), made as (
   insert into public.leagues (
     name, slug, description, owner_id, season, scope, conference_id,
@@ -103,7 +107,13 @@ with spec(ord, name, scope, conf, descr, owner) as (values
          true,
          now() - ((20 - s.ord) || ' days')::interval
     from spec s
-    join public.profiles p on p.display_name = s.owner
+    -- Commissioners are drawn by hash rather than matched to a theme: a league
+    -- whose owner's handle echoes its name is one more tell.
+    join lateral (
+      select id from public.profiles
+       where email like '%@seed.pickemweekly.com'
+       order by md5(s.ord::text || ':' || id::text) limit 1
+    ) p on true
   returning id, owner_id
 )
 insert into public.league_members (league_id, user_id, role, joined_at)
