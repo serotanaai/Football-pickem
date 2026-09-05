@@ -149,6 +149,35 @@ export async function updateLeagueAction(
   return { ok: "League settings saved." };
 }
 
+/**
+ * The commissioner removing someone.
+ *
+ * The database decides whether it is allowed — who is asking, whether the
+ * target is a member, and whether the bracket already exists — so the message
+ * shown here is the one it gave.
+ */
+export async function removeMemberAction(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const leagueId = String(formData.get("league_id") ?? "");
+  const slug = String(formData.get("slug") ?? "");
+  const userId = String(formData.get("user_id") ?? "");
+  const name = String(formData.get("name") ?? "That member");
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("remove_league_member", {
+    p_league_id: leagueId,
+    p_user_id: userId,
+  });
+
+  if (error) return { error: error.message };
+
+  revalidatePath(`/leagues/${slug}/settings`);
+  revalidatePath(`/leagues/${slug}`);
+  return { ok: `${name} is no longer in this league.` };
+}
+
 export async function leaveLeagueAction(formData: FormData): Promise<void> {
   const leagueId = String(formData.get("league_id") ?? "");
   const supabase = await createClient();
