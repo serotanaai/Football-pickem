@@ -4,7 +4,7 @@ import { Reveal } from "@/components/Reveal";
 import { Ticker } from "@/components/Ticker";
 import { createClient } from "@/lib/supabase/server";
 import { loadPickCount, loadTicker } from "@/lib/ticker";
-import { pickCountLine } from "@/lib/tickerCopy";
+import { PickCounter } from "@/components/PickCounter";
 
 /**
  * The payoff first, then where the games come from, then the choice you make.
@@ -76,18 +76,8 @@ export default async function HomePage() {
           Custom slates, live scores, and weekly leaderboards — free to join.
         </p>
 
-        {/* Whatever the database says at render time. */}
-        <p
-          style={{
-            margin: "0 0 1.75rem",
-            fontSize: "0.88rem",
-            fontWeight: 600,
-            color: "var(--accent)",
-            fontVariantNumeric: "tabular-nums",
-          }}
-        >
-          {pickCountLine(pickCount)}
-        </p>
+        {/* Whatever the database says at render time, and it keeps asking. */}
+        <PickCounter initial={pickCount} />
 
         <div style={{ display: "flex", gap: "0.6rem", flexWrap: "wrap", alignItems: "center" }}>
           <Link className="btn btn-primary" href="/login">
@@ -125,6 +115,12 @@ export default async function HomePage() {
           <figure style={{ margin: "0 0 3.5rem" }}>
             <div className="glass" aria-hidden style={{ padding: "0.85rem 0.9rem" }}>
               <div className="matchup-meta" style={{ marginBottom: "0.55rem" }}>
+                {/* The caption below sells the feature now rather than labelling
+                    the card, so the label moves in here. The split is invented —
+                    a real one is a league's own consensus, private to its
+                    members — and an unmarked 63/37 reads as a number somebody
+                    actually voted for. */}
+                <span className="tag-example">Example</span>
                 <span className="muted">Sat, 3:30 PM · ABC</span>
                 <span style={{ marginLeft: "auto" }} className="muted">
                   12 of 12 picked
@@ -158,7 +154,7 @@ export default async function HomePage() {
               </div>
             </div>
             <figcaption className="note" style={{ margin: "0.5rem 0 0" }}>
-              Example board — how a league sees its week once everyone has picked.
+              Pick your favorites every week and see how you match up.
             </figcaption>
           </figure>
         </Reveal>

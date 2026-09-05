@@ -118,11 +118,3 @@ export function recapScore(game: TickerGame, short = false): string {
 export function pendingLine(week: number): string {
   return `Week ${week} matchups drop soon`;
 }
-
-/**
- * The hero's social proof. One sentence, one number, and the number is whatever
- * the database says at render time.
- */
-export function pickCountLine(count: number): string {
-  return `${count.toLocaleString()} picks made this season`;
-}

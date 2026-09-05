@@ -1081,3 +1081,37 @@ dialog.modal[open]::backdrop {
     padding-right: 0;
   }
 }
+
+/* The picks counter. Bigger than body copy because it is the one number on the
+   page doing any persuading, with the figure itself carrying the weight. */
+.pick-count {
+  margin: 0 0 1.9rem;
+  font-size: 1rem;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.pick-count strong {
+  font-size: 1.45rem;
+  font-weight: 750;
+  letter-spacing: -0.02em;
+  color: var(--accent);
+  margin-right: 0.3rem;
+  /* Digits change width as they roll; tabular figures keep the line from
+     twitching while the number counts up. */
+  font-variant-numeric: tabular-nums;
+}
+
+/* Marks a mocked-up card as one. Quiet enough not to fight the card, plain
+   enough that nobody has to hunt for it. */
+.tag-example {
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.02rem 0.3rem;
+  margin-right: 0.15rem;
+}
