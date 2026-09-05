@@ -346,6 +346,47 @@ export interface Database {
         Args: { p_code: string };
         Returns: Database["public"]["Tables"]["leagues"]["Row"];
       };
+      browse_leagues: {
+        Args: { p_season: number; p_scope?: string | null; p_search?: string | null };
+        Returns: {
+          id: string;
+          name: string;
+          slug: string;
+          description: string | null;
+          scope: LeagueScope;
+          conference: string | null;
+          member_count: number;
+          already_member: boolean;
+        }[];
+      };
+      join_public_league: {
+        Args: { p_league_id: string };
+        Returns: Database["public"]["Tables"]["leagues"]["Row"];
+      };
+      latest_scored_week: { Args: { p_season: number }; Returns: number | null };
+      leaderboard_week: {
+        Args: { p_season: number; p_week?: number | null; p_limit?: number };
+        Returns: { display_name: string; points: number; correct: number; week: number }[];
+      };
+      leaderboard_players: {
+        Args: { p_season: number; p_limit?: number };
+        Returns: {
+          display_name: string;
+          points: number;
+          correct: number;
+          leagues: number;
+        }[];
+      };
+      leaderboard_leagues: {
+        Args: { p_season: number; p_limit?: number };
+        Returns: {
+          name: string;
+          slug: string;
+          scope: LeagueScope;
+          points: number;
+          member_count: number;
+        }[];
+      };
       invite_card: {
         Args: { p_code: string };
         Returns: {

@@ -24,3 +24,24 @@ export async function joinLeagueAction(
 
   redirect(`/leagues/${data.slug}`);
 }
+
+/**
+ * Joining something listed openly. No invite code, because the listing is the
+ * invitation — but the caps still apply, and the database says so.
+ */
+export async function joinPublicLeagueAction(
+  _prev: JoinState,
+  formData: FormData,
+): Promise<JoinState> {
+  const leagueId = String(formData.get("league_id") ?? "");
+  if (!leagueId) return { error: "Pick a league to join." };
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("join_public_league", { p_league_id: leagueId });
+
+  if (error || !data) {
+    return { error: error?.message ?? "That league is not open to join." };
+  }
+
+  redirect(`/leagues/${data.slug}`);
+}

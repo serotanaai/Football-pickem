@@ -732,3 +732,61 @@ textarea:disabled {
   box-shadow: none;
   -webkit-text-fill-color: var(--muted); /* Safari ignores color on disabled */
 }
+
+/* ---------------------------------------------------------------------------
+   Modal
+
+   Native <dialog>, so the focus trap, the Escape key and the inert background
+   come from the browser rather than from us. It only needs a coat of paint and
+   a backdrop that puts some distance between it and the page underneath.
+--------------------------------------------------------------------------- */
+
+dialog.modal {
+  padding: 0;
+  border: 1px solid var(--glass-edge);
+  border-radius: 16px;
+  background:
+    linear-gradient(168deg, var(--glass-top) 0%, var(--glass-bottom) 100%),
+    var(--surface);
+  color: var(--text);
+  box-shadow:
+    inset 0 1px 0 var(--glass-lip),
+    var(--e3);
+  width: min(400px, calc(100vw - 2rem));
+  max-height: calc(100vh - 2rem);
+  overflow: auto;
+}
+
+dialog.modal::backdrop {
+  background: rgba(10, 14, 18, 0.5);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+}
+
+dialog.modal[open] {
+  animation: modal-in 200ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+dialog.modal[open]::backdrop {
+  animation: backdrop-in 200ms ease;
+}
+
+@keyframes modal-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+}
+
+@keyframes backdrop-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  dialog.modal[open],
+  dialog.modal[open]::backdrop {
+    animation: none;
+  }
+}

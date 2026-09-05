@@ -5,9 +5,9 @@ import { loadMembers } from "@/lib/board";
 import { siteUrl } from "@/lib/env";
 import { scopeLabel } from "@/lib/format";
 import { LocalTime } from "@/components/LocalTime";
-import { leaveLeagueAction } from "../actions";
 import { InviteLink } from "./InviteLink";
 import { RemoveMember } from "./RemoveMember";
+import { LeaveLeague } from "./LeaveLeague";
 import { LeagueSettingsForm, SeedPlayoffsForm } from "./CommissionerForms";
 
 export const dynamic = "force-dynamic";
@@ -213,6 +213,7 @@ export default async function SettingsPage({
                 description={league.description}
                 maxGames={league.max_games_per_week}
           scope={league.scope}
+          isPublic={league.is_public}
                 endWeek={league.regular_season_end_week}
                 playoffTeams={league.playoff_teams}
               />
@@ -240,12 +241,7 @@ export default async function SettingsPage({
             <p className="muted" style={{ margin: "0 0 0.75rem", fontSize: "0.88rem" }}>
               Your picks stay on record, but you drop out of the standings.
             </p>
-            <form action={leaveLeagueAction}>
-              <input type="hidden" name="league_id" value={league.id} />
-              <button className="btn" type="submit" style={{ color: "var(--danger)" }}>
-                Leave {league.name}
-              </button>
-            </form>
+            <LeaveLeague leagueId={league.id} leagueName={league.name} />
           </div>
         </section>
       )}

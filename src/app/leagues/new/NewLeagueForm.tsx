@@ -3,6 +3,7 @@
 import { useActionState, useState } from "react";
 import { createLeagueAction, type CreateLeagueState } from "./actions";
 import type { LeagueScope } from "@/lib/database.types";
+import { VisibilityChoice } from "@/components/VisibilityChoice";
 import {
   DEFAULT_GAMES_PER_WEEK,
   MAX_GAMES_PER_WEEK,
@@ -55,6 +56,8 @@ export function NewLeagueForm({
             <label htmlFor="description">Description (optional)</label>
             <input id="description" name="description" placeholder="Loser buys wings" />
           </div>
+          {/* Public unless you say otherwise — an empty Join page helps nobody. */}
+          <VisibilityChoice defaultPublic />
         </div>
       </div>
 

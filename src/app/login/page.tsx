@@ -9,7 +9,13 @@ export default async function LoginPage({
   searchParams: Promise<{ next?: string; error?: string }>;
 }) {
   const params = await searchParams;
-  const next = params.next && params.next.startsWith("/") ? params.next : "/dashboard";
+  const asked = params.next && params.next.startsWith("/") ? params.next : null;
+  const next = asked ?? "/dashboard";
+
+  // A brand-new account has no leagues, so its dashboard is empty. Send it to
+  // the Join page instead — unless something already said where to go, which
+  // an invite link does.
+  const signupNext = asked ?? "/join";
 
   // An invite link has to send you through sign-in first. Say why, so the
   // detour reads as part of joining rather than as something going wrong.
@@ -39,7 +45,7 @@ export default async function LoginPage({
             ? "You've been invited to a pick'em league. Sign in or create an account and you'll go straight to it."
             : "Weekly college football pick'em with your friends — conference slates, all of FBS, or just the top 25."}
         </p>
-        <LoginForm next={next} initialError={params.error} />
+        <LoginForm next={next} signupNext={signupNext} initialError={params.error} />
       </div>
     </div>
   );

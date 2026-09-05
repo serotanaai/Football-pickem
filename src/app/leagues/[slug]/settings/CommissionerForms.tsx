@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import { VisibilityChoice } from "@/components/VisibilityChoice";
 import {
   MAX_GAMES_PER_WEEK,
   MIN_GAMES_PER_WEEK,
@@ -29,6 +30,7 @@ export function LeagueSettingsForm({
   description,
   maxGames,
   scope,
+  isPublic,
   endWeek,
   playoffTeams,
 }: {
@@ -38,6 +40,7 @@ export function LeagueSettingsForm({
   description: string | null;
   maxGames: number;
   scope: string;
+  isPublic: boolean;
   endWeek: number;
   playoffTeams: number;
 }) {
@@ -64,6 +67,11 @@ export function LeagueSettingsForm({
           gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
         }}
       >
+        {/* Listing is what puts a league on the Join page. */}
+        <div style={{ gridColumn: "1 / -1" }}>
+          <VisibilityChoice defaultPublic={isPublic} />
+        </div>
+
         {scopePicksItsOwnSize(scope) ? (
           <div>
             <label htmlFor="league-max-games">Games per week</label>
