@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
@@ -10,8 +11,38 @@ import {
   MAX_LEAGUES_PER_SEASON,
 } from "@/lib/league";
 import { JoinForm } from "../JoinForm";
+import { loadInvitePreview } from "./invite";
 
 export const dynamic = "force-dynamic";
+
+/**
+ * The words beside the card. An unfurl is a picture and a line of text, and a
+ * generic title under a league-specific image reads as a mistake.
+ */
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ code: string }>;
+}): Promise<Metadata> {
+  const { code } = await params;
+  const invite = await loadInvitePreview(code);
+
+  // openGraph and twitter are set explicitly, not left to inherit from the
+  // title above: the root layout sets openGraph.title itself, and an explicit
+  // parent value wins over a child's plain title — which is how an invite ends
+  // up unfurling with a league-specific image under the generic headline.
+  const title = invite ? `Join ${invite.name} · PickemWeekly` : "Join a league · PickemWeekly";
+  const description = invite
+    ? `${invite.detail}. Pick winners every week, and settle the season in a bracket.`
+    : "You've been invited to a college football pick'em league.";
+
+  return {
+    title,
+    description,
+    openGraph: { title, description, type: "website" },
+    twitter: { title, description, card: "summary_large_image" },
+  };
+}
 
 export default async function InvitePage({
   params,

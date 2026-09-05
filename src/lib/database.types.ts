@@ -346,6 +346,15 @@ export interface Database {
         Args: { p_code: string };
         Returns: Database["public"]["Tables"]["leagues"]["Row"];
       };
+      invite_card: {
+        Args: { p_code: string };
+        Returns: {
+          name: string;
+          scope: LeagueScope;
+          conference_name: string | null;
+          member_count: number;
+        }[];
+      };
       league_preview_by_code: {
         Args: { p_code: string };
         Returns: {
