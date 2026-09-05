@@ -4,6 +4,7 @@ import {
   refreshLeagues,
   resolveWindow,
   syncConferences,
+  syncRankings,
   syncSecretMatches,
   syncTeams,
   syncWeek,
@@ -13,8 +14,15 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 
 /**
- * One entry point for scheduled runs: seeds the team list on first use, pulls the
- * current and previous week, grades picks, and settles playoff matchups.
+ * One entry point for scheduled runs: seeds the team list on first use, pulls
+ * the week in play, grades picks, and settles playoff matchups.
+ *
+ * Two jobs are expected to call this. A frequent one for scores, every few
+ * minutes while games are on, which fetches the current week and nothing else.
+ * And a weekly one with ?rankings=1 after the AP poll lands on Sunday, since
+ * the poll does not move in between and a scores run has no reason to ask for
+ * it.
+ *
  * Vercel Cron sends `Authorization: Bearer $CRON_SECRET`, which syncSecretMatches
  * accepts when CRON_SECRET and SYNC_SECRET are the same value.
  */
@@ -38,13 +46,30 @@ export async function GET(request: Request) {
       await syncConferences(db);
       teams = await syncTeams(db, season);
     }
+    const url = new URL(request.url);
+    const withRankings = url.searchParams.get("rankings") === "1";
+
     const results: Record<string, unknown> = {};
     for (const week of weeks) {
       results[`week_${week}`] = await syncWeek(db, season, week);
     }
 
+    let rankings: number | null = null;
+    if (withRankings) {
+      rankings = 0;
+      for (const week of weeks) rankings += await syncRankings(db, season, week);
+    }
+
     const leagues = await refreshLeagues(db, season, weeks);
-    return NextResponse.json({ ok: true, seededTeams: teams, season, weeks, results, leagues });
+    return NextResponse.json({
+      ok: true,
+      seededTeams: teams,
+      season,
+      weeks,
+      rankings,
+      results,
+      leagues,
+    });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Cron failed";
     return NextResponse.json({ ok: false, error: message }, { status: 502 });

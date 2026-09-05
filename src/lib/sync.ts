@@ -63,22 +63,31 @@ export async function syncWeek(db: Supabase, season: number, week: number) {
     if (error) throw new Error(`games week ${week}: ${error.message}`);
   }
 
-  let rankingsSynced = 0;
+  return { games: games.length, teams: syncedTeams };
+}
+
+/**
+ * The AP poll, which moves once a week.
+ *
+ * Deliberately not part of syncWeek. The ranks that decide a top-25 slate ride
+ * along inside the scoreboard response as curatedRank and land on the games
+ * themselves, so pulling the poll on every scores run was a second request an
+ * hour that bought nothing between Sunday afternoons.
+ */
+export async function syncRankings(db: Supabase, season: number, week: number) {
   try {
     const rankings = await fetchRankings(season, week);
-    if (rankings.length > 0) {
-      const { error } = await db.from("rankings").upsert(
-        rankings.map((r) => ({ ...r, updated_at: new Date().toISOString() })),
-      );
-      if (error) throw new Error(error.message);
-      rankingsSynced = rankings.length;
-    }
-  } catch {
-    // Polls are not published for every week (and not at all before week 3).
-    // Game-level curatedRank already covers the top-25 slates, so this is optional.
-  }
+    if (rankings.length === 0) return 0;
 
-  return { games: games.length, teams: syncedTeams, rankings: rankingsSynced };
+    const { error } = await db.from("rankings").upsert(
+      rankings.map((r) => ({ ...r, updated_at: new Date().toISOString() })),
+    );
+    if (error) throw new Error(error.message);
+    return rankings.length;
+  } catch {
+    // Polls are not published every week, and not at all before week 3.
+    return 0;
+  }
 }
 
 /**
@@ -131,9 +140,14 @@ export async function resolveWindow(url: URL) {
   if (!season || weeks.length === 0) {
     const current = await fetchCurrentWeek();
     season ??= current.season;
-    // Re-pull the previous week too: late finals and stat corrections land there.
     if (weeks.length === 0) {
-      weeks = current.week > 1 ? [current.week - 1, current.week] : [current.week];
+      // The previous week is only worth re-pulling for late finals and stat
+      // corrections, which do not arrive every three minutes. Once an hour is
+      // plenty, and keying it off the clock means no state to keep and a
+      // schedule that heals itself if a run is missed.
+      const catchUp =
+        url.searchParams.get("catchup") === "1" || new Date().getUTCMinutes() < 5;
+      weeks = current.week > 1 && catchUp ? [current.week - 1, current.week] : [current.week];
     }
   }
 
