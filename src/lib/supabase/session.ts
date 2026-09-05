@@ -14,7 +14,7 @@ const PUBLIC_FILES = [
   "/manifest.webmanifest",
 ];
 
-const PUBLIC_PATHS = ["/", "/login", "/auth", "/join"];
+const PUBLIC_PATHS = ["/", "/login", "/auth", "/join", "/reset-password"];
 
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request });

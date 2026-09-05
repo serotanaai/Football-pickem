@@ -720,3 +720,15 @@ tbody tr:hover {
     display: none;
   }
 }
+
+/* A field shown for context rather than for editing: the reset page displays
+   the account it is about, and neither value is the reader's to change. */
+input:disabled,
+select:disabled,
+textarea:disabled {
+  background: color-mix(in srgb, var(--muted) 12%, transparent);
+  color: var(--muted);
+  cursor: not-allowed;
+  box-shadow: none;
+  -webkit-text-fill-color: var(--muted); /* Safari ignores color on disabled */
+}

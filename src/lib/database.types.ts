@@ -370,6 +370,14 @@ export interface Database {
           firstError: string | null;
         };
       };
+      email_has_account: {
+        Args: { p_email: string };
+        Returns: boolean;
+      };
+      username_available: {
+        Args: { p_name: string };
+        Returns: boolean;
+      };
       regenerate_invite_code: { Args: { p_league_id: string }; Returns: string };
       leave_league: { Args: { p_league_id: string }; Returns: undefined };
       generate_week_board: {
