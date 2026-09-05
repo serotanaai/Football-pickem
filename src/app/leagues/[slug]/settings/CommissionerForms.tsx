@@ -29,6 +29,7 @@ export function LeagueSettingsForm({
   description,
   maxGames,
   scope,
+  isPublic,
   endWeek,
   playoffTeams,
 }: {
@@ -38,6 +39,7 @@ export function LeagueSettingsForm({
   description: string | null;
   maxGames: number;
   scope: string;
+  isPublic: boolean;
   endWeek: number;
   playoffTeams: number;
 }) {
@@ -64,6 +66,35 @@ export function LeagueSettingsForm({
           gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
         }}
       >
+        {/* Listing is what puts a league on the Join page. */}
+        <label
+          htmlFor="league-is-public"
+          style={{
+            gridColumn: "1 / -1",
+            display: "flex",
+            gap: "0.55rem",
+            alignItems: "flex-start",
+            cursor: "pointer",
+            marginBottom: 0,
+            color: "var(--text)",
+            fontWeight: 500,
+          }}
+        >
+          <input
+            id="league-is-public"
+            name="is_public"
+            type="checkbox"
+            defaultChecked={isPublic}
+            style={{ width: "auto", marginTop: "0.15rem" }}
+          />
+          <span>
+            List this league publicly
+            <span className="note" style={{ display: "block", margin: "0.15rem 0 0" }}>
+              Anyone can find it on the Join page and join without an invite.
+            </span>
+          </span>
+        </label>
+
         {scopePicksItsOwnSize(scope) ? (
           <div>
             <label htmlFor="league-max-games">Games per week</label>

@@ -55,6 +55,32 @@ export function NewLeagueForm({
             <label htmlFor="description">Description (optional)</label>
             <input id="description" name="description" placeholder="Loser buys wings" />
           </div>
+          <label
+            htmlFor="is_public"
+            style={{
+              display: "flex",
+              gap: "0.55rem",
+              alignItems: "flex-start",
+              cursor: "pointer",
+              marginBottom: 0,
+              color: "var(--text)",
+              fontWeight: 500,
+            }}
+          >
+            <input
+              id="is_public"
+              name="is_public"
+              type="checkbox"
+              style={{ width: "auto", marginTop: "0.15rem" }}
+            />
+            <span>
+              List this league publicly
+              <span className="note" style={{ display: "block", margin: "0.15rem 0 0" }}>
+                Anyone can find it on the Join page and join without an invite. Off by default, and
+                you can change it later.
+              </span>
+            </span>
+          </label>
         </div>
       </div>
 

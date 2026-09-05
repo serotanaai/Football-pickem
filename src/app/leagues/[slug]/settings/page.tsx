@@ -213,6 +213,7 @@ export default async function SettingsPage({
                 description={league.description}
                 maxGames={league.max_games_per_week}
           scope={league.scope}
+          isPublic={league.is_public}
                 endWeek={league.regular_season_end_week}
                 playoffTeams={league.playoff_teams}
               />
