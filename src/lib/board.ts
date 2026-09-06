@@ -119,6 +119,22 @@ export function isLocked(game: Pick<Tables<"games">, "start_time">): boolean {
   return new Date(game.start_time).getTime() <= Date.now();
 }
 
+/**
+ * Whether a week is over: every game on the board has finished.
+ *
+ * The same test the league_week_settled view makes, kept here so a page holding
+ * a board in hand does not have to go back to the database to ask. Canceled
+ * games never complete, so they must not hold a week open forever.
+ *
+ * A week with no games is not settled — an empty board has not concluded, it
+ * has not started.
+ */
+export function weekIsSettled(games: Pick<Tables<"games">, "completed" | "status">[]): boolean {
+  return (
+    games.length > 0 && games.every((game) => game.completed || game.status === "canceled")
+  );
+}
+
 /** The row that seals a member's week, or null if they can still pick. */
 export async function loadSubmission(
   leagueId: string,
