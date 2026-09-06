@@ -221,6 +221,7 @@ export interface Database {
           game_count: number;
           is_playoff: boolean;
           playoff_round: number | null;
+          featured_game_id: number | null;
         };
         Insert: never;
         Update: never;

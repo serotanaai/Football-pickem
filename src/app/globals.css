@@ -1314,11 +1314,13 @@ dialog.modal[open]::backdrop {
 }
 
 /* A game that is on right now is the one thing on the page worth interrupting
-   for, so its card is outlined rather than merely labelled. */
+   for, so its card is outlined rather than merely labelled.
+
+   Drawn inside the card's own edge. An outer ring would put a live game a few
+   pixels wider than the final above it, and a column of cards that changes
+   width as games start and end reads as broken rather than as busy. */
 .matchup.is-live {
-  box-shadow:
-    inset 0 0 0 1px color-mix(in srgb, var(--danger) 45%, transparent),
-    0 0 0 3px color-mix(in srgb, var(--danger) 10%, transparent);
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--danger) 45%, transparent);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1467,4 +1469,136 @@ dialog.modal[open]::backdrop {
   letter-spacing: 0.04em;
   color: var(--accent-ink);
   background: var(--accent);
+}
+
+/* --- matchup of the week ---------------------------------------------------
+
+   The same card, scaled up. Gold rather than green, because green already means
+   "this team won" on this page and a second meaning for it would cost the first
+   one its clarity.
+--------------------------------------------------------------------------- */
+
+:root {
+  --gold: #9a6b00;
+  --gold-soft: #fdf3d9;
+  --gold-ink: #fffdf7;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --gold: #e8b93c;
+    --gold-soft: #2b230f;
+    --gold-ink: #1a1405;
+  }
+}
+
+:root[data-theme="dark"] {
+  --gold: #e8b93c;
+  --gold-soft: #2b230f;
+  --gold-ink: #1a1405;
+}
+
+.featured-head {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.5rem;
+}
+
+.chip-featured,
+.chip-multiplier {
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border-radius: 4px;
+  padding: 0.08rem 0.4rem;
+  line-height: 1.5;
+}
+
+.chip-featured {
+  color: var(--gold);
+  background: var(--gold-soft);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--gold) 40%, transparent);
+}
+
+/* The multiplier is the reason the section exists, so it is the solid one. */
+.chip-multiplier {
+  color: var(--gold-ink);
+  background: var(--gold);
+}
+
+.matchup.is-featured {
+  padding: 0.9rem 1rem;
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--gold) 55%, transparent);
+}
+
+/* A live featured game is still live: red wins the outline, gold keeps the
+   chips, and the two never argue over the same edge. */
+.matchup.is-featured.is-live {
+  box-shadow:
+    inset 0 0 0 2px color-mix(in srgb, var(--danger) 45%, transparent),
+    inset 0 0 0 5px color-mix(in srgb, var(--gold) 22%, transparent);
+}
+
+.matchup.is-featured .tug {
+  min-height: 72px;
+  border-radius: 12px;
+}
+
+.matchup.is-featured .tug-label b {
+  font-size: 1rem;
+}
+
+.matchup.is-featured .tug-score {
+  font-size: 1.35rem;
+}
+
+.matchup.is-featured .tug-logo {
+  width: 34px;
+  height: 34px;
+}
+
+.featured-where {
+  margin: 0.5rem 0 0;
+  font-size: 0.78rem;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 0.1rem;
+  flex-wrap: wrap;
+}
+
+/* The 2.5x game on the pick board. Same card, gold where the others are green —
+   the multiplier is the difference, not the layout. */
+.pick-cell.is-gold .pick-tag {
+  color: var(--gold);
+}
+
+.pick-cell.is-gold .pick-tag.is-miss {
+  color: var(--danger);
+}
+
+.pick-cell.is-gold .pick-tile.is-mine {
+  border-color: var(--gold);
+  background: var(--gold-soft);
+}
+
+.pick-cell.is-gold .pick-tile.is-hit {
+  border-color: var(--gold);
+  background: color-mix(in srgb, var(--gold) 20%, transparent);
+}
+
+.pick-cell.is-gold .pick-score.is-won {
+  color: var(--gold);
+}
+
+.pick-cell.is-gold .pick-mark.is-won {
+  color: var(--gold-ink);
+  background: var(--gold);
+}
+
+.surface.is-featured-pick {
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--gold) 45%, transparent);
 }

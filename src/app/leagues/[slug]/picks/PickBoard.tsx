@@ -3,7 +3,7 @@
 import { useActionState, useState } from "react";
 import { TeamChip } from "@/components/TeamChip";
 import { Badge } from "@/components/Badge";
-import { formatDay, POINTS_PER_PICK } from "@/lib/format";
+import { FEATURED_MULTIPLIER, FEATURED_POINTS, formatDay, POINTS_PER_PICK } from "@/lib/format";
 import { LocalTime } from "@/components/LocalTime";
 import { submitPicksAction } from "../actions";
 import type { ActionState } from "../actions";
@@ -32,6 +32,7 @@ export function PickBoard({
   slug,
   week,
   games,
+  featuredGameId,
   initialPicks,
   submitted,
 }: {
@@ -39,6 +40,8 @@ export function PickBoard({
   slug: string;
   week: number;
   games: PickGame[];
+  /** The 2.5x game for this week, or null before a board has one. */
+  featuredGameId: number | null;
   initialPicks: Record<number, number>;
   /** Once the week is in, the board becomes a record of what you picked. */
   submitted: boolean;
@@ -57,8 +60,13 @@ export function PickBoard({
       .map((game) => ({ game_id: game.id, team_id: picks[game.id] })),
   );
 
+  const featured = games.find((game) => game.id === featuredGameId) ?? null;
+
+  // Everything else keeps its day grouping; the featured game is shown once,
+  // above, rather than twice.
   const byDay = new Map<string, PickGame[]>();
   for (const game of games) {
+    if (game.id === featuredGameId) continue;
     const day = formatDay(game.start_time);
     byDay.set(day, [...(byDay.get(day) ?? []), game]);
   }
@@ -71,6 +79,24 @@ export function PickBoard({
       <input type="hidden" name="picks" value={payload} />
 
       <div style={{ display: "grid", gap: "1.5rem" }}>
+        {featured ? (
+          <section>
+            <div className="featured-head">
+              <span className="chip-featured">Week {week} featured matchup</span>
+              <span className="chip-multiplier">
+                {FEATURED_MULTIPLIER}× points · {FEATURED_POINTS} for a correct pick
+              </span>
+            </div>
+            <GameRow
+              game={featured}
+              picked={picks[featured.id]}
+              readOnly={submitted}
+              featured
+              onPick={(teamId) => setPicks((prev) => ({ ...prev, [featured.id]: teamId }))}
+            />
+          </section>
+        ) : null}
+
         {[...byDay.entries()].map(([day, dayGames]) => (
           <section key={day}>
             <h2
@@ -194,11 +220,14 @@ function GameRow({
   picked,
   onPick,
   readOnly,
+  featured = false,
 }: {
   game: PickGame;
   picked: number | undefined;
   onPick: (teamId: number) => void;
   readOnly: boolean;
+  /** The 2.5x game: same card, gold instead of green. */
+  featured?: boolean;
 }) {
   const detail = game.completed
     ? "Final"
@@ -218,13 +247,16 @@ function GameRow({
           : null
       : game.completed && game.winner_team_id !== null
         ? game.winner_team_id === picked
-          ? { label: `+${POINTS_PER_PICK}`, tone: "accent" as const }
+          ? {
+              label: `+${featured ? FEATURED_POINTS : POINTS_PER_PICK}`,
+              tone: "accent" as const,
+            }
           : { label: "0", tone: "muted" as const }
         : null;
 
   return (
     <div
-      className="surface"
+      className={`surface${featured ? " is-featured-pick" : ""}`}
       style={{
         padding: "0.75rem 0.9rem",
         // A submitted week is not a disabled one; only games out of reach recede.
@@ -280,7 +312,7 @@ function GameRow({
           const faded = !mine && picked !== undefined && !decided;
 
           return (
-            <div className="pick-cell" key={team.id}>
+            <div className={`pick-cell${featured ? " is-gold" : ""}`} key={team.id}>
               {mine ? (
                 <span className={`pick-tag ${verdict}`}>Your pick</span>
               ) : (

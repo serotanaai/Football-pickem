@@ -93,6 +93,10 @@ export default async function LeagueOverviewPage({
       clock: game.clock,
       broadcast: game.broadcast,
       neutralSite: game.neutral_site,
+      venue: game.venue,
+      // Chosen when the board was built and frozen there, so the 2.5x cannot
+      // move under somebody after they have picked.
+      featured: board.leagueWeek?.featured_game_id === game.id,
       winnerTeamId: game.winner_team_id,
       revealed: split?.revealed ?? false,
       totalPicks: split?.total ?? 0,
@@ -169,6 +173,7 @@ export default async function LeagueOverviewPage({
           </span>
         </div>
         <WeekMatchups
+          week={week}
           rows={matchupRows}
           memberCount={members.length}
           submitted={submission !== null}

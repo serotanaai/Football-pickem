@@ -139,6 +139,7 @@ export default async function PicksPage({
           slug={slug}
           week={week}
           games={boardGames}
+          featuredGameId={leagueWeek?.featured_game_id ?? null}
           initialPicks={initialPicks}
           submitted={submission !== null}
         />

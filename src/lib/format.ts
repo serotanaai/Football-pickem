@@ -3,6 +3,16 @@ import type { LeagueScope } from "@/lib/database.types";
 /** Points awarded for one correct pick. */
 export const POINTS_PER_PICK = 100;
 
+/**
+ * The matchup of the week is worth two and a half times a normal game.
+ *
+ * Mirrors grade_picks, which applies the multiplier at scoring time rather than
+ * storing it on the pick — so a board rebuilt before kickoff re-scores correctly
+ * and nothing needs migrating if the number ever changes.
+ */
+export const FEATURED_MULTIPLIER = 2.5;
+export const FEATURED_POINTS = POINTS_PER_PICK * FEATURED_MULTIPLIER;
+
 export function scopeLabel(scope: LeagueScope, conferenceName?: string | null): string {
   switch (scope) {
     case "conference":

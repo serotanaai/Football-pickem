@@ -2,6 +2,7 @@ import { Badge } from "@/components/Badge";
 import { Reveal } from "@/components/Reveal";
 import { LocalTime } from "@/components/LocalTime";
 import { teamFill, teamInk } from "@/lib/teamColor";
+import { FEATURED_MULTIPLIER } from "@/lib/format";
 import { periodLabel } from "@/lib/tickerCopy";
 
 export type MatchupSide = {
@@ -26,6 +27,8 @@ export type MatchupRow = {
   clock: string | null;
   broadcast: string | null;
   neutralSite: boolean;
+  venue: string | null;
+  featured: boolean;
   winnerTeamId: number | null;
   /** true once you have submitted this week, or the game has kicked off */
   revealed: boolean;
@@ -146,10 +149,12 @@ export function WeekMatchups({
   rows,
   memberCount,
   submitted,
+  week,
 }: {
   rows: MatchupRow[];
   memberCount: number;
   submitted: boolean;
+  week: number;
 }) {
   if (rows.length === 0) {
     return (
@@ -161,80 +166,137 @@ export function WeekMatchups({
     );
   }
 
+  const featured = rows.find((row) => row.featured) ?? null;
+  const rest = rows.filter((row) => !row.featured);
+
   return (
-    <div style={{ display: "grid", gap: "0.55rem" }}>
-      {!submitted ? (
-        <p className="note" style={{ margin: "0 0 0.1rem" }}>
-          Submit your picks to see how the league is split on each game.
-        </p>
+    <div style={{ display: "grid", gap: "1.4rem" }}>
+      {featured ? (
+        <section>
+          <div className="featured-head">
+            <span className="chip-featured">Week {week} featured matchup</span>
+            <span className="chip-multiplier">{FEATURED_MULTIPLIER}× points</span>
+          </div>
+          <MatchupCard row={featured} memberCount={memberCount} index={0} featured />
+        </section>
       ) : null}
 
-      {rows.map((row, index) => {
-        const live = row.status === "in_progress";
-        // Period and clock when the feed has them, its own wording when it does
-        // not — "3rd 4:22" beats "In Progress", but neither beats nothing.
-        const clock =
-          [row.period ? periodLabel(row.period) : null, row.clock].filter(Boolean).join(" ") ||
-          row.statusDetail;
+      <section style={{ display: "grid", gap: "0.55rem" }}>
+        {!submitted ? (
+          <p className="note" style={{ margin: "0 0 0.1rem" }}>
+            Submit your picks to see how the league is split on each game.
+          </p>
+        ) : null}
 
-        const split = row.revealed && row.totalPicks > 0;
-        // The bar is the split itself; with nothing to show yet it rests even.
-        const base = split ? clampShare(row.away.pct) : 50;
-        const decided = row.completed && row.winnerTeamId !== null;
-        const awayWon = decided && row.winnerTeamId === row.away.teamId;
-        const awayWidth = decided
-          ? Math.min(100 - MIN_SHARE, Math.max(MIN_SHARE, base + (awayWon ? WINNER_BONUS : -WINNER_BONUS)))
-          : base;
-
-        return (
-          <Reveal key={row.id} delay={Math.min(index, 8) * 55}>
-            <div
-              className={`glass matchup surface-hover${live ? " is-live" : ""}${
-                row.completed ? " is-final" : ""
-              }`}
-              style={{ "--shine-delay": `${(index % 6) * 1.1}s` } as React.CSSProperties}
-            >
-              <div className="matchup-meta">
-                {live ? (
-                  <span className="chip-live">
-                    <span className="chip-live-dot" aria-hidden />
-                    Live
-                  </span>
-                ) : row.completed ? (
-                  <span className="chip-final">Final</span>
-                ) : null}
-
-                <span className="muted">
-                  {live
-                    ? clock
-                    : row.completed
-                      ? null
-                      : <LocalTime iso={row.startTime} mode="kickoff" showZone />}
-                </span>
-                {row.broadcast && !row.completed ? (
-                  <span className="muted">· {row.broadcast}</span>
-                ) : null}
-                {row.neutralSite ? <Badge tone="muted">Neutral</Badge> : null}
-                <span style={{ marginLeft: "auto", display: "flex", gap: "0.35rem" }}>
-                  {!row.myTeamId ? <Badge tone="muted">No pick</Badge> : null}
-                </span>
-              </div>
-
-              <div className={`tug${split ? " is-split" : ""}`}>
-                <TeamSide side={row.away} row={row} home={false} width={awayWidth} />
-                <TeamSide side={row.home} row={row} home width={100 - awayWidth} />
-              </div>
-
-              {split && row.totalPicks < memberCount ? (
-                <p className="note" style={{ fontSize: "0.72rem" }}>
-                  {memberCount - row.totalPicks} of {memberCount}{" "}
-                  {memberCount - row.totalPicks === 1 ? "member" : "members"} had no pick here.
-                </p>
-              ) : null}
-            </div>
-          </Reveal>
-        );
-      })}
+        {rest.map((row, index) => (
+          <MatchupCard key={row.id} row={row} memberCount={memberCount} index={index} />
+        ))}
+      </section>
     </div>
+  );
+}
+
+/**
+ * One game.
+ *
+ * Every state renders the same box — the live outline is drawn inside the
+ * card's own edge rather than around it, so a live game does not sit a few
+ * pixels wider than the final above it and the column stays straight.
+ *
+ * The featured card is the same card, scaled up: a taller bar and bigger type,
+ * with the kickoff and the ground underneath, because a game worth two and a
+ * half times the others should not have to be found.
+ */
+function MatchupCard({
+  row,
+  memberCount,
+  index,
+  featured = false,
+}: {
+  row: MatchupRow;
+  memberCount: number;
+  index: number;
+  featured?: boolean;
+}) {
+  const live = row.status === "in_progress";
+  // Period and clock when the feed has them, its own wording when it does not —
+  // "3rd 4:22" beats "In Progress", but neither beats nothing.
+  const clock =
+    [row.period ? periodLabel(row.period) : null, row.clock].filter(Boolean).join(" ") ||
+    row.statusDetail;
+
+  const split = row.revealed && row.totalPicks > 0;
+  // The bar is the split itself; with nothing to show yet it rests even.
+  const base = split ? clampShare(row.away.pct) : 50;
+  const decided = row.completed && row.winnerTeamId !== null;
+  const awayWon = decided && row.winnerTeamId === row.away.teamId;
+  const awayWidth = decided
+    ? Math.min(
+        100 - MIN_SHARE,
+        Math.max(MIN_SHARE, base + (awayWon ? WINNER_BONUS : -WINNER_BONUS)),
+      )
+    : base;
+
+  return (
+    <Reveal delay={Math.min(index, 8) * 55}>
+      <div
+        className={`glass matchup surface-hover${live ? " is-live" : ""}${
+          row.completed ? " is-final" : ""
+        }${featured ? " is-featured" : ""}`}
+        style={{ "--shine-delay": `${(index % 6) * 1.1}s` } as React.CSSProperties}
+      >
+        <div className="matchup-meta">
+          {live ? (
+            <span className="chip-live">
+              <span className="chip-live-dot" aria-hidden />
+              Live
+            </span>
+          ) : row.completed ? (
+            <span className="chip-final">Final</span>
+          ) : null}
+
+          <span className="muted">
+            {/* The featured card spells the kickoff out underneath, with the
+                ground next to it, so printing it here too would just be the
+                same fact twice on one card. */}
+            {live ? (
+              clock
+            ) : row.completed || featured ? null : (
+              <LocalTime iso={row.startTime} mode="kickoff" showZone />
+            )}
+          </span>
+          {row.broadcast && !row.completed ? (
+            <span className="muted">· {row.broadcast}</span>
+          ) : null}
+          {row.neutralSite ? <Badge tone="muted">Neutral</Badge> : null}
+          <span style={{ marginLeft: "auto", display: "flex", gap: "0.35rem" }}>
+            {!row.myTeamId ? <Badge tone="muted">No pick</Badge> : null}
+          </span>
+        </div>
+
+        <div className={`tug${split ? " is-split" : ""}`}>
+          <TeamSide side={row.away} row={row} home={false} width={awayWidth} />
+          <TeamSide side={row.home} row={row} home width={100 - awayWidth} />
+        </div>
+
+        {/* The featured card earns the extra line: where and when, spelled out
+            rather than left in the meta row where it would be one more muted
+            fragment among several. */}
+        {featured ? (
+          <p className="featured-where">
+            <LocalTime iso={row.startTime} mode="kickoff" showZone />
+            {row.venue ? <span className="ticker-dot">·</span> : null}
+            {row.venue}
+          </p>
+        ) : null}
+
+        {split && row.totalPicks < memberCount ? (
+          <p className="note" style={{ fontSize: "0.72rem" }}>
+            {memberCount - row.totalPicks} of {memberCount}{" "}
+            {memberCount - row.totalPicks === 1 ? "member" : "members"} had no pick here.
+          </p>
+        ) : null}
+      </div>
+    </Reveal>
   );
 }
