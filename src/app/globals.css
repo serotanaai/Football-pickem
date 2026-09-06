@@ -947,7 +947,20 @@ dialog.modal[open]::backdrop {
   animation-duration: 0s;
 }
 
-.ticker:hover .ticker-track,
+/* Pausing under the pointer is for a pointer that can leave again.
+   A touchscreen has no such thing: tapping the bar — or just starting a scroll
+   with a thumb on it, which is exactly where a bar pinned to the top of the
+   page sits — leaves :hover stuck on it until something else is tapped, and the
+   tape stops for the rest of the visit. So the pause is asked for by hover
+   capability rather than assumed. */
+@media (hover: hover) and (pointer: fine) {
+  .ticker:hover .ticker-track {
+    animation-play-state: paused;
+  }
+}
+
+/* Focus is not the same bargain: it only lands here if a keyboard put it here,
+   and someone reading the bar that way needs it to hold still. */
 .ticker:focus-within .ticker-track {
   animation-play-state: paused;
 }
@@ -1111,11 +1124,14 @@ dialog.modal[open]::backdrop {
     animation: none;
   }
 
+  /* The fade at the ends stays. It is paint, not movement, and dropping it was
+     the difference between "this bar does not scroll on my phone" and "this is
+     a different bar on my phone" — iOS reports this preference for Low Power
+     Mode as well as for the accessibility setting, so a lot of ordinary phones
+     land in here without anyone having chosen it. */
   .ticker-window {
     overflow-x: auto;
     scrollbar-width: none;
-    -webkit-mask-image: none;
-    mask-image: none;
   }
 
   .ticker-window::-webkit-scrollbar {
@@ -1139,15 +1155,18 @@ dialog.modal[open]::backdrop {
     height: 15px;
   }
 
-  .ticker-item,
-  .ticker-item::after {
+  /* The same two numbers as the wide layout, tightened: the item's trailing gap
+     and the bullet's leading one have to stay equal, or the separator stops
+     sitting in the middle of the space between two scores. Setting them through
+     one grouped selector also handed every item a left margin of its own, which
+     the wide layout has no equivalent of. */
+  .ticker-item {
     padding-right: 1.5rem;
-    margin-left: 1.5rem;
   }
 
   .ticker-item::after {
+    margin-left: 1.5rem;
     left: 0.75rem;
-    padding-right: 0;
   }
 }
 
