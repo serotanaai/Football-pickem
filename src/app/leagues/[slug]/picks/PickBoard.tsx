@@ -3,7 +3,7 @@
 import { useActionState, useState } from "react";
 import { TeamChip } from "@/components/TeamChip";
 import { Badge } from "@/components/Badge";
-import { formatDay, POINTS_PER_PICK } from "@/lib/format";
+import { FEATURED_MULTIPLIER, FEATURED_POINTS, formatDay, POINTS_PER_PICK } from "@/lib/format";
 import { LocalTime } from "@/components/LocalTime";
 import { submitPicksAction } from "../actions";
 import type { ActionState } from "../actions";
@@ -32,6 +32,7 @@ export function PickBoard({
   slug,
   week,
   games,
+  featuredGameId,
   initialPicks,
   submitted,
 }: {
@@ -39,6 +40,8 @@ export function PickBoard({
   slug: string;
   week: number;
   games: PickGame[];
+  /** The 2.5x game for this week, or null before a board has one. */
+  featuredGameId: number | null;
   initialPicks: Record<number, number>;
   /** Once the week is in, the board becomes a record of what you picked. */
   submitted: boolean;
@@ -57,8 +60,13 @@ export function PickBoard({
       .map((game) => ({ game_id: game.id, team_id: picks[game.id] })),
   );
 
+  const featured = games.find((game) => game.id === featuredGameId) ?? null;
+
+  // Everything else keeps its day grouping; the featured game is shown once,
+  // above, rather than twice.
   const byDay = new Map<string, PickGame[]>();
   for (const game of games) {
+    if (game.id === featuredGameId) continue;
     const day = formatDay(game.start_time);
     byDay.set(day, [...(byDay.get(day) ?? []), game]);
   }
@@ -71,6 +79,24 @@ export function PickBoard({
       <input type="hidden" name="picks" value={payload} />
 
       <div style={{ display: "grid", gap: "1.5rem" }}>
+        {featured ? (
+          <section>
+            <div className="featured-head">
+              <span className="chip-featured">Week {week} featured matchup</span>
+              <span className="chip-multiplier">
+                {FEATURED_MULTIPLIER}× points · {FEATURED_POINTS} for a correct pick
+              </span>
+            </div>
+            <GameRow
+              game={featured}
+              picked={picks[featured.id]}
+              readOnly={submitted}
+              featured
+              onPick={(teamId) => setPicks((prev) => ({ ...prev, [featured.id]: teamId }))}
+            />
+          </section>
+        ) : null}
+
         {[...byDay.entries()].map(([day, dayGames]) => (
           <section key={day}>
             <h2
@@ -194,11 +220,14 @@ function GameRow({
   picked,
   onPick,
   readOnly,
+  featured = false,
 }: {
   game: PickGame;
   picked: number | undefined;
   onPick: (teamId: number) => void;
   readOnly: boolean;
+  /** The 2.5x game: same card, gold instead of green. */
+  featured?: boolean;
 }) {
   const detail = game.completed
     ? "Final"
@@ -206,27 +235,28 @@ function GameRow({
       ? (game.status_detail ?? "In progress")
       : null;
 
-  // What this game did to your week, once it is out of reach — or, on a week
-  // you have already submitted, what you did with it.
-  const outcome = !game.locked
-    ? !readOnly
-      ? null
-      : picked === undefined
-        ? { label: "No pick", tone: "muted" as const }
-        : { label: "Your pick", tone: "accent" as const }
-    : picked === undefined
-      ? { label: "Missed — no pick", tone: "muted" as const }
-      : !game.completed
-        ? { label: "Pick locked in", tone: "muted" as const }
-        : game.winner_team_id === null
-          ? { label: "No result", tone: "muted" as const }
-          : game.winner_team_id === picked
-            ? { label: `+${POINTS_PER_PICK}`, tone: "accent" as const }
-            : { label: "0", tone: "muted" as const };
+  // What this game did to your week. The tiles below say which side you took
+  // and whether it came in, so this is only for what they cannot: the points,
+  // and the absence of a pick at all.
+  const outcome =
+    picked === undefined
+      ? game.locked
+        ? { label: "Missed — no pick", tone: "muted" as const }
+        : readOnly
+          ? { label: "No pick", tone: "muted" as const }
+          : null
+      : game.completed && game.winner_team_id !== null
+        ? game.winner_team_id === picked
+          ? {
+              label: `+${featured ? FEATURED_POINTS : POINTS_PER_PICK}`,
+              tone: "accent" as const,
+            }
+          : { label: "0", tone: "muted" as const }
+        : null;
 
   return (
     <div
-      className="surface"
+      className={`surface${featured ? " is-featured-pick" : ""}`}
       style={{
         padding: "0.75rem 0.9rem",
         // A submitted week is not a disabled one; only games out of reach recede.
@@ -269,55 +299,50 @@ function GameRow({
         ].map(({ team, rank, score, at }) => {
           if (!team) return <div key={at ? "away" : "home"} />;
 
-          const selected = picked === team.id;
-          const won = game.completed && game.winner_team_id === team.id;
-          const lost = game.completed && game.winner_team_id !== null && !won;
+          const mine = picked === team.id;
+          const decided = game.completed && game.winner_team_id !== null;
+          const won = decided && game.winner_team_id === team.id;
+          const lost = decided && !won;
+
+          // Your pick carries the verdict: green once it comes in, red once it
+          // does not, and the plain accent while the game is still out there.
+          const verdict = mine ? (decided ? (won ? "is-hit" : "is-miss") : "is-mine") : "";
+          // With a pick made and no result yet, the side you did not take steps
+          // back so the one you did reads first.
+          const faded = !mine && picked !== undefined && !decided;
 
           return (
-            <button
-              key={team.id}
-              type="button"
-              disabled={game.locked || readOnly}
-              onClick={() => onPick(team.id)}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                gap: "0.5rem",
-                textAlign: "left",
-                padding: "0.55rem 0.65rem",
-                borderRadius: 9,
-                cursor: game.locked || readOnly ? "default" : "pointer",
-                background: selected ? "var(--accent-soft)" : "transparent",
-                border: `1.5px solid ${selected ? "var(--accent)" : "var(--border)"}`,
-                color: lost ? "var(--muted)" : "var(--text)",
-                font: "inherit",
-                minWidth: 0,
-              }}
-            >
-              <span style={{ display: "flex", alignItems: "center", gap: "0.4rem", minWidth: 0 }}>
-                {at ? (
-                  <span className="muted" style={{ fontSize: "0.7rem", flexShrink: 0 }}>
-                    @
-                  </span>
-                ) : null}
-                <TeamChip team={team} rank={rank} />
-              </span>
-              <span style={{ display: "flex", alignItems: "center", gap: "0.4rem", flexShrink: 0 }}>
-                {score !== null && (game.completed || game.status === "in_progress") ? (
-                  <strong
-                    style={{
-                      fontVariantNumeric: "tabular-nums",
-                      fontSize: "0.95rem",
-                      color: won ? "var(--accent)" : "inherit",
-                    }}
-                  >
-                    {score}
-                  </strong>
-                ) : null}
-                {won ? <span title="Winner">✓</span> : null}
-              </span>
-            </button>
+            <div className={`pick-cell${featured ? " is-gold" : ""}`} key={team.id}>
+              {mine ? (
+                <span className={`pick-tag ${verdict}`}>Your pick</span>
+              ) : (
+                <span className="pick-tag is-empty" aria-hidden />
+              )}
+
+              <button
+                type="button"
+                disabled={game.locked || readOnly}
+                onClick={() => onPick(team.id)}
+                className={`pick-tile ${verdict}${faded ? " is-faded" : ""}${
+                  lost && !mine ? " is-out" : ""
+                }`}
+              >
+                <span className="pick-tile-team">
+                  {at ? <span className="muted pick-at">@</span> : null}
+                  <TeamChip team={team} rank={rank} />
+                </span>
+                <span className="pick-tile-right">
+                  {score !== null && (game.completed || game.status === "in_progress") ? (
+                    <strong className={`pick-score${won ? " is-won" : ""}`}>{score}</strong>
+                  ) : null}
+                  {won ? (
+                    <span className="pick-mark is-won" title="Winner" aria-label="Winner">
+                      W
+                    </span>
+                  ) : null}
+                </span>
+              </button>
+            </div>
           );
         })}
       </div>

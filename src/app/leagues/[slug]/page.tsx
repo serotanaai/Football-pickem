@@ -48,7 +48,12 @@ export default async function LeagueOverviewPage({
     })
     .sort((a, b) => b.weeklyWins - a.weeklyWins || b.points - a.points);
 
-  const lastCompletedWeek = (weekly ?? []).find((row) => row.week < week)?.week ?? null;
+  // The most recent week that is actually over. `settled` is true only once
+  // every game on this league's board for that week has gone final, so a
+  // Saturday half-played no longer produces a winner that changes all
+  // afternoon.
+  const lastCompletedWeek =
+    (weekly ?? []).find((row) => row.week < week && row.settled)?.week ?? null;
   const lastWinners = lastCompletedWeek
     ? (weekly ?? []).filter((row) => row.week === lastCompletedWeek && row.week_rank === 1)
     : [];
@@ -84,8 +89,14 @@ export default async function LeagueOverviewPage({
       status: game.status,
       completed: game.completed,
       statusDetail: game.status_detail,
+      period: game.period,
+      clock: game.clock,
       broadcast: game.broadcast,
       neutralSite: game.neutral_site,
+      venue: game.venue,
+      // Chosen when the board was built and frozen there, so the 2.5x cannot
+      // move under somebody after they have picked.
+      featured: board.leagueWeek?.featured_game_id === game.id,
       winnerTeamId: game.winner_team_id,
       revealed: split?.revealed ?? false,
       totalPicks: split?.total ?? 0,
@@ -162,6 +173,7 @@ export default async function LeagueOverviewPage({
           </span>
         </div>
         <WeekMatchups
+          week={week}
           rows={matchupRows}
           memberCount={members.length}
           submitted={submission !== null}

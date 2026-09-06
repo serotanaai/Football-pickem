@@ -221,6 +221,7 @@ export interface Database {
           game_count: number;
           is_playoff: boolean;
           playoff_round: number | null;
+          featured_game_id: number | null;
         };
         Insert: never;
         Update: never;
@@ -314,7 +315,13 @@ export interface Database {
           points: number;
           week_rank: number;
           week_won: boolean;
+          /** Every game on the league's board for this week has gone final. */
+          settled: boolean;
         };
+        Relationships: [];
+      };
+      league_week_settled: {
+        Row: { league_id: string; week: number; settled: boolean };
         Relationships: [];
       };
       league_standings: {
