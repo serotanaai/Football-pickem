@@ -73,7 +73,7 @@ export default async function InviteImage({ params }: { params: Promise<{ code: 
               maxWidth: 1000,
             }}
           >
-            The Best College Weekly Pick&apos;em
+            The Best College Football Weekly Pick&apos;em
           </div>
 
           {/* Which league, and how big. Below the pitch rather than above it,
