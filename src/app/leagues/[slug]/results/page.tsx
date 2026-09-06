@@ -53,13 +53,14 @@ export default async function ResultsPage({
     })
     .sort((a, b) => b.points - a.points || a.name.localeCompare(b.name));
 
-  // A week has a winner when the week is over, not when it has started going
-  // final. One graded game used to be enough here, which crowned somebody at
-  // lunchtime and re-crowned them all afternoon.
-  const settled = weekIsSettled(board.games);
-  const finalCount = board.games.filter((game) => game.completed).length;
-  const leaders = rows.filter((row) => row.rank === 1 && row.points > 0);
-  const winners = settled ? leaders : [];
+  // A week has a winner when the week is over, and says nothing before then.
+  // One graded game used to be enough here, which crowned somebody at lunchtime
+  // and re-crowned them all afternoon; a running leader was no better, since
+  // whoever is shown at the top of a half-played week is still not the winner.
+  // The table below already shows where everyone stands.
+  const winners = weekIsSettled(board.games)
+    ? rows.filter((row) => row.rank === 1 && row.points > 0)
+    : [];
   // A pick reveals when its own game kicks off, matching how it locked.
   const shownGames = board.games.filter((game) => isLocked(game));
 
@@ -85,7 +86,7 @@ export default async function ResultsPage({
         </Suspense>
       </div>
 
-      {leaders.length > 0 && finalCount > 0 ? (
+      {winners.length > 0 ? (
         <div
           className="surface"
           style={{
@@ -97,20 +98,11 @@ export default async function ResultsPage({
             flexWrap: "wrap",
           }}
         >
-          {winners.length > 0 ? (
-            <Badge tone="accent">🏆 Week {week} winner</Badge>
-          ) : (
-            /* Not a winner. Somebody is ahead with games still to play, and
-               saying so is useful — calling it a win is not. */
-            <Badge tone="muted">Leading</Badge>
-          )}
-          <strong>{leaders.map((w) => w.name).join(" and ")}</strong>
+          <Badge tone="accent">🏆 Week {week} winner</Badge>
+          <strong>{winners.map((w) => w.name).join(" and ")}</strong>
           <span className="muted" style={{ fontSize: "0.88rem" }}>
-            {leaders[0].points.toLocaleString()} points
-            {leaders.length > 1 ? " (tied)" : ""}
-            {settled
-              ? ""
-              : ` · ${finalCount} of ${board.games.length} games final`}
+            {winners[0].points.toLocaleString()} points
+            {winners.length > 1 ? " (tied)" : ""}
           </span>
         </div>
       ) : null}
