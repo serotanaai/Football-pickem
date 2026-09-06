@@ -41,8 +41,17 @@ export function countdownParts(msRemaining: number): string {
   return units.slice(0, 2).join(" ");
 }
 
-export function countdownLine(week: number, msRemaining: number): string {
-  return `Week ${week} kicks off in ${countdownParts(msRemaining)}`;
+/**
+ * A week only kicks off once.
+ *
+ * College football spreads a week across a Thursday, a Friday and two waves on
+ * Saturday, so most of the gaps this bar counts through are inside a week that
+ * is already well underway — telling a reader on Saturday morning that week 1
+ * "kicks off" in four hours is describing games they watched last night.
+ */
+export function countdownLine(week: number, msRemaining: number, resumed = false): string {
+  const verb = resumed ? "resumes" : "kicks off";
+  return `Week ${week} ${verb} in ${countdownParts(msRemaining)}`;
 }
 
 /** The game a countdown is counting to, named rather than just timed. */

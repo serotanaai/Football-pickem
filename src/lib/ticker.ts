@@ -32,8 +32,18 @@ export type TickerGame = {
 
 export type TickerState =
   | { kind: "live"; week: number; games: TickerGame[] }
-  /** Static, and it names the game it is counting to. */
-  | { kind: "countdown"; week: number; kickoff: string; game: TickerGame | null }
+  /**
+   * Static, and it names the game it is counting to. `resumed` is true when
+   * that week already has games behind it, which changes what the bar can
+   * honestly call the wait.
+   */
+  | {
+      kind: "countdown";
+      week: number;
+      kickoff: string;
+      game: TickerGame | null;
+      resumed: boolean;
+    }
   | { kind: "recap"; week: number; games: TickerGame[]; total: number }
   | { kind: "pending"; week: number }
   | { kind: "idle" };
@@ -118,13 +128,15 @@ export async function loadTicker(season = DEFAULT_SEASON): Promise<TickerState> 
 
   // 2. Nothing on, but something still to come — this week or the next one.
   //    The countdown names its own target, so the two have to be the same game.
-  const upcoming = await firstFbsKickoff(season, new Date(now).toISOString());
+  const nowIso = new Date(now).toISOString();
+  const upcoming = await firstFbsKickoff(season, nowIso);
   if (upcoming) {
     return {
       kind: "countdown",
       week: upcoming.week,
       kickoff: upcoming.game.startTime,
       game: upcoming.game,
+      resumed: await weekUnderway(season, upcoming.week, nowIso),
     };
   }
 
@@ -136,6 +148,28 @@ export async function loadTicker(season = DEFAULT_SEASON): Promise<TickerState> 
   }
 
   return { kind: "idle" };
+}
+
+/**
+ * Whether the week being counted into is one the season has already played in.
+ *
+ * A week is a Thursday game, a Friday game and two waves on Saturday, so nearly
+ * every gap the bar counts through sits inside a week that is already running.
+ * The question is only about kickoffs that have passed, not about results: a
+ * game in its first quarter has started the week just as much as a final has,
+ * and this is asked while nothing is live anyway.
+ */
+async function weekUnderway(season: number, week: number, nowIso: string): Promise<boolean> {
+  const supabase = await createClient();
+  const { count } = await supabase
+    .from("games")
+    .select("id", { count: "exact", head: true })
+    .eq("season", season)
+    .eq("season_type", 2)
+    .eq("week", week)
+    .neq("status", "canceled")
+    .lte("start_time", nowIso);
+  return (count ?? 0) > 0;
 }
 
 /**

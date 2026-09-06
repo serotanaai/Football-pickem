@@ -107,7 +107,7 @@ export function Ticker({ initial }: { initial: TickerState }) {
     return (
       <Bar>
         <span className="ticker-static">
-          <strong>{countdownLine(state.week, (kickoff ?? now) - now)}</strong>
+          <strong>{countdownLine(state.week, (kickoff ?? now) - now, state.resumed)}</strong>
           {state.game ? (
             <>
               <Dot />
