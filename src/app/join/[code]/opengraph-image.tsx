@@ -59,14 +59,33 @@ export default async function InviteImage({ params }: { params: Promise<{ code: 
             Join My League!
           </div>
 
+          {/* The pitch, straight under the headline and on every card whether
+              or not the league resolved — it is the one line that has to be
+              there for the invite to mean anything to a stranger. */}
+          <div
+            style={{
+              display: "flex",
+              fontSize: 40,
+              fontWeight: 700,
+              color: "#5fbf85",
+              letterSpacing: "-0.02em",
+              marginTop: 18,
+              maxWidth: 1000,
+            }}
+          >
+            The Best College Weekly Pick&apos;em
+          </div>
+
+          {/* Which league, and how big. Below the pitch rather than above it,
+              but still on the card: an invite that does not name the league it
+              is inviting you to is just an advert. */}
           {leagueName ? (
             <div
               style={{
                 display: "flex",
-                fontSize: 44,
-                fontWeight: 700,
-                color: "#5fbf85",
-                letterSpacing: "-0.02em",
+                fontSize: 30,
+                fontWeight: 650,
+                color: "#eceef1",
                 marginTop: 20,
                 maxWidth: 1000,
               }}
@@ -78,14 +97,14 @@ export default async function InviteImage({ params }: { params: Promise<{ code: 
           <div
             style={{
               display: "flex",
-              fontSize: 29,
+              fontSize: 27,
               color: "#9aa0a8",
-              marginTop: leagueName ? 12 : 22,
+              marginTop: leagueName ? 8 : 20,
               maxWidth: 900,
               lineHeight: 1.35,
             }}
           >
-            {detail ?? "Weekly college football pick'em with your friends."}
+            {detail ?? "Free to join. Pick winners every week."}
           </div>
         </div>
 
