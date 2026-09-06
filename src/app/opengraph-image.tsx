@@ -1,6 +1,6 @@
 import { ImageResponse } from "next/og";
 
-export const alt = "PickemWeekly — college football pick'em with your friends";
+export const alt = "PickemWeekly — join college football's best weekly pick'em";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -53,7 +53,7 @@ export default async function OpengraphImage() {
             maxWidth: 900,
           }}
         >
-          College football pick&apos;em, run properly.
+          Join College Football&rsquo;s Best Weekly Pick &rsquo;Em.
         </div>
 
         <div
@@ -66,8 +66,7 @@ export default async function OpengraphImage() {
             lineHeight: 1.35,
           }}
         >
-          Pick every week, watch the league split in real time, then settle it
-          in a bracket.
+          The best teams, live scores, and weekly leaderboards — free to join.
         </div>
       </div>
 
@@ -92,39 +91,44 @@ export default async function OpengraphImage() {
               fontSize: 30,
               fontWeight: 750,
               padding: "0 26px",
+              justifyContent: "space-between",
             }}
           >
-            Ohio State
+            <div style={{ display: "flex" }}>Ohio State</div>
+            <div style={{ display: "flex" }}>{split}%</div>
           </div>
           <div
             style={{
               display: "flex",
               alignItems: "center",
-              justifyContent: "flex-end",
               width: `${100 - split}%`,
               background: "#0021a5",
               color: "#ffffff",
               fontSize: 30,
               fontWeight: 750,
               padding: "0 26px",
+              justifyContent: "space-between",
             }}
           >
-            Florida
+            <div style={{ display: "flex" }}>{100 - split}%</div>
+            <div style={{ display: "flex" }}>Florida</div>
           </div>
         </div>
 
+        {/* The bar is here to show the shape of the product, so the split is
+            drawn but not captioned as a statistic — a share card cannot know a
+            real league's consensus, and a number under it would read as if it
+            did. */}
         <div
           style={{
             display: "flex",
-            justifyContent: "space-between",
-            marginTop: 14,
-            fontSize: 26,
+            marginTop: 16,
+            fontSize: 25,
             color: "#9aa0a8",
-            fontWeight: 700,
+            fontWeight: 650,
           }}
         >
-          <div style={{ display: "flex" }}>{split}% of the league</div>
-          <div style={{ display: "flex" }}>{100 - split}%</div>
+          One bar per game. Your league&rsquo;s picks, pushing against each other.
         </div>
       </div>
     </div>,
