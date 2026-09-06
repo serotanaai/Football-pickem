@@ -48,7 +48,12 @@ export default async function LeagueOverviewPage({
     })
     .sort((a, b) => b.weeklyWins - a.weeklyWins || b.points - a.points);
 
-  const lastCompletedWeek = (weekly ?? []).find((row) => row.week < week)?.week ?? null;
+  // The most recent week that is actually over. `settled` is true only once
+  // every game on this league's board for that week has gone final, so a
+  // Saturday half-played no longer produces a winner that changes all
+  // afternoon.
+  const lastCompletedWeek =
+    (weekly ?? []).find((row) => row.week < week && row.settled)?.week ?? null;
   const lastWinners = lastCompletedWeek
     ? (weekly ?? []).filter((row) => row.week === lastCompletedWeek && row.week_rank === 1)
     : [];

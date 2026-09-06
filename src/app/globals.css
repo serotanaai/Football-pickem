@@ -461,17 +461,31 @@ tr:last-child td {
 
 /* Until the split is known both halves rest even and washed out, so the bar
    never implies a lead it does not have. */
-/* The winner is ringed in its own ink, which contrasts with its fill by
-   construction. Dimming the loser instead would blend its fill toward the
-   page behind it and break the contrast its text was chosen for. */
+/* The winner goes green, not its own colour.
+   
+   This board has nothing to do with your picks — it is the league's split on a
+   game — so green here means one thing only: this team won. Leaving the winner
+   in its own colours made the reader work out which of two coloured halves was
+   the result; one green half and one grey one needs no working out. */
 .tug-side.is-won {
-  box-shadow: inset 0 0 0 2px color-mix(in srgb, currentColor 60%, transparent);
+  background: var(--accent) !important;
+  --ink: var(--accent-ink) !important;
+  text-shadow: none;
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--accent-ink) 35%, transparent);
 }
 
 .tug-side.is-home.is-won {
   box-shadow:
-    inset 0 0 0 2px color-mix(in srgb, currentColor 60%, transparent),
-    inset 2px 0 0 rgba(255, 255, 255, 0.7);
+    inset 0 0 0 2px color-mix(in srgb, var(--accent-ink) 35%, transparent),
+    inset 2px 0 0 color-mix(in srgb, var(--accent-ink) 45%, transparent);
+}
+
+/* The crest was drawn to sit on the team's own colour, so on green it gets a
+   plate of its own rather than being left to fend for itself. */
+.tug-side.is-won .tug-logo {
+  background: rgba(255, 255, 255, 0.92);
+  border-radius: 5px;
+  padding: 1px;
 }
 
 /* The loser gives up its colour, so the winner is the only team on the bar
@@ -529,12 +543,6 @@ tr:last-child td {
   font-weight: 800;
 }
 
-.tug-mine.is-hit,
-.tug-mine.is-miss {
-  font-size: 0.72rem;
-  font-weight: 800;
-  opacity: 1;
-}
 
 .tug:not(.is-split) .tug-side { opacity: 0.6; }
 .tug:not(.is-split) .tug-side.is-home {

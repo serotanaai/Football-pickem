@@ -48,6 +48,16 @@ function clampShare(pct: number): number {
   return Math.min(100 - MIN_SHARE, Math.max(MIN_SHARE, pct));
 }
 
+/**
+ * How much the winning side takes off the loser once a game is decided.
+ *
+ * The bar is the league's pick split, and this bends it — but the printed
+ * percentages stay exact, so nothing is misreported, and the clamp above
+ * already bends the same way for the same kind of reason. A result is worth
+ * more than a few points of width in how the row reads.
+ */
+const WINNER_BONUS = 7;
+
 function TeamSide({
   side,
   row,
@@ -105,16 +115,13 @@ function TeamSide({
               W
             </span>
           ) : null}
-          {/* Your pick, and once the game is decided, whether it came in. */}
+          {/* Which side you took, and nothing about how it went. Green on this
+              board means the team won, full stop — laying a personal verdict
+              over the same colour would make one green mean two things. The
+              pick screen is where your week is scored. */}
           {mine ? (
-            <span
-              className={`tug-mine${decided ? (won ? " is-hit" : " is-miss") : ""}`}
-              title={decided ? (won ? "Your pick — correct" : "Your pick — wrong") : "Your pick"}
-              aria-label={
-                decided ? (won ? "Your pick, correct" : "Your pick, wrong") : "Your pick"
-              }
-            >
-              {decided ? (won ? "✓" : "✕") : "●"}
+            <span className="tug-mine" title="Your pick" aria-label="Your pick">
+              ●
             </span>
           ) : null}
         </b>
@@ -172,7 +179,12 @@ export function WeekMatchups({
 
         const split = row.revealed && row.totalPicks > 0;
         // The bar is the split itself; with nothing to show yet it rests even.
-        const awayWidth = split ? clampShare(row.away.pct) : 50;
+        const base = split ? clampShare(row.away.pct) : 50;
+        const decided = row.completed && row.winnerTeamId !== null;
+        const awayWon = decided && row.winnerTeamId === row.away.teamId;
+        const awayWidth = decided
+          ? Math.min(100 - MIN_SHARE, Math.max(MIN_SHARE, base + (awayWon ? WINNER_BONUS : -WINNER_BONUS)))
+          : base;
 
         return (
           <Reveal key={row.id} delay={Math.min(index, 8) * 55}>

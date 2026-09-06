@@ -314,7 +314,13 @@ export interface Database {
           points: number;
           week_rank: number;
           week_won: boolean;
+          /** Every game on the league's board for this week has gone final. */
+          settled: boolean;
         };
+        Relationships: [];
+      };
+      league_week_settled: {
+        Row: { league_id: string; week: number; settled: boolean };
         Relationships: [];
       };
       league_standings: {

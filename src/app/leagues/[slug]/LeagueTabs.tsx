@@ -10,7 +10,7 @@ export function LeagueTabs({ slug, isCommissioner }: { slug: string; isCommissio
   const tabs = [
     { href: base, label: "Overview" },
     { href: `${base}/picks`, label: "Make picks" },
-    { href: `${base}/results`, label: "Results" },
+    { href: `${base}/results`, label: "Rankings" },
     { href: `${base}/playoffs`, label: "Playoffs" },
     { href: `${base}/settings`, label: isCommissioner ? "Manage" : "League info" },
   ];
