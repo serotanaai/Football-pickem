@@ -980,7 +980,17 @@ dialog.modal[open]::backdrop {
   flex: none;
 }
 
+/* A row, not a line of text.
+
+   The parts of an item do not share a baseline worth aligning on: a crest is a
+   replaced box whose baseline is its own bottom edge, so anything grouped with
+   one hangs off the text baseline by the height of the logo rather than sitting
+   on it — the countdown sentence and the matchup beside it came out 5.5px
+   apart. Centring them against each other is the alignment that was actually
+   wanted, and it is the same thing the inside of a score already does. */
 .ticker-item {
+  display: flex;
+  align-items: center;
   padding-right: 2.25rem;
   flex: none;
 }
@@ -1004,6 +1014,11 @@ dialog.modal[open]::backdrop {
    digit — would leave the animation running at a length the content no longer
    has, and the seam would drift open.
 --------------------------------------------------------------------------- */
+
+.ticker-matchup {
+  display: flex;
+  align-items: center;
+}
 
 .ticker-score {
   display: inline-flex;

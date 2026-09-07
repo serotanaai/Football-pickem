@@ -18,11 +18,11 @@ import {
 /**
  * The scoreboard strip: a tape when there are scores, a sign when there are not.
  *
- * Scores scroll, because there are a dozen of them and a bar that swaps one for
- * another every few seconds asks the reader to wait for the game they care
- * about. A countdown is one fact that changes once a second and holds still,
- * because there is nothing to scroll past and motion under a headline you are
- * trying to read is just noise.
+ * Everything on it scrolls, at one reading speed set from the width of the
+ * content rather than from a fixed duration: a dozen scores take four times as
+ * long to pass as three do, instead of going four times as fast. A bar that
+ * swapped one score for another every few seconds would ask the reader to wait
+ * for the game they care about; a tape hands it to them on the way past.
  */
 
 const POLL_MS = 45_000;
@@ -108,12 +108,9 @@ export function Ticker({ initial }: { initial: TickerState }) {
     const game = state.game;
     return (
       <Bar>
-        {/* One line, and it only moves if it has to. A laptop has room for the
-            whole sentence and holds it still, which is what a countdown wants;
-            a phone does not, and clipping it would drop the matchup and the
-            kickoff time — the two parts worth reading. So the same tape that
-            carries the scores carries this too, and Tape decides which it is by
-            measuring.
+        {/* The countdown rides the same tape the scores do. A phone has no room
+            to hold the whole sentence still, and clipping it would drop the
+            matchup and the kickoff time — the two parts worth reading.
 
             The signature deliberately includes the countdown text: the digits
             are tabular, so a minute ticking by measures identically and the
@@ -125,7 +122,10 @@ export function Ticker({ initial }: { initial: TickerState }) {
             {game ? (
               <>
                 <Dot />
-                <span aria-label={matchupLine(game, narrow)}>
+                {/* The label wrapper is a box in the layout too, so it has to
+                    centre what it holds — left inline it re-creates the very
+                    baseline offset .ticker-item exists to avoid. */}
+                <span className="ticker-matchup" aria-label={matchupLine(game, narrow)}>
                   <span aria-hidden className="ticker-score">
                     <Side logo={game.awayLogo} name={narrow ? game.awayAbbr : game.awayTeam} full={game.awayTeam} />
                     at
