@@ -936,6 +936,33 @@ dialog.modal[open]::backdrop {
   );
 }
 
+/* Content that already fits: no loop, no second copy, and no fade at the ends
+   — the fade is there to sell things entering and leaving, and over a sentence
+   that is simply sitting there it just dims the first and last words. */
+.ticker-window.is-static {
+  -webkit-mask-image: none;
+  mask-image: none;
+}
+
+.ticker-window.is-static .ticker-track {
+  animation: none;
+  width: 100%;
+}
+
+.ticker-window.is-static .ticker-run[aria-hidden] {
+  display: none;
+}
+
+/* The trailing gap and bullet space one lap from the next. Standing still there
+   is no next lap, so they would read as a sentence ending in a stray dot. */
+.ticker-window.is-static .ticker-item {
+  padding-right: 0;
+}
+
+.ticker-window.is-static .ticker-item::after {
+  content: none;
+}
+
 .ticker-track {
   display: flex;
   width: max-content;
@@ -1004,6 +1031,13 @@ dialog.modal[open]::backdrop {
 }
 
 .ticker-crest {
+  /* Tailwind's preflight lays every image out as a block. Inside a score that
+     is invisible, because the row around it is a flex container and blockifies
+     its children anyway — but a crest sitting in ordinary inline text, which is
+     what the countdown is, breaks the line either side of itself and turns one
+     sentence into five. */
+  display: inline-block;
+  vertical-align: -0.22em;
   width: 18px;
   height: 18px;
   object-fit: contain;

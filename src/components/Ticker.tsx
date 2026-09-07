@@ -104,26 +104,40 @@ export function Ticker({ initial }: { initial: TickerState }) {
   if (state.kind === "idle") return null;
 
   if (state.kind === "countdown") {
+    const line = countdownLine(state.week, (kickoff ?? now) - now, state.resumed);
+    const game = state.game;
     return (
       <Bar>
-        <span className="ticker-static">
-          <strong>{countdownLine(state.week, (kickoff ?? now) - now, state.resumed)}</strong>
-          {state.game ? (
-            <>
-              <Dot />
-              <span aria-label={matchupLine(state.game, narrow)}>
-                <span aria-hidden>
-                  <Crest src={state.game.awayLogo} name={state.game.awayTeam} />
-                  {narrow ? state.game.awayAbbr : state.game.awayTeam} at{" "}
-                  <Crest src={state.game.homeLogo} name={state.game.homeTeam} />
-                  {narrow ? state.game.homeAbbr : state.game.homeTeam}
+        {/* One line, and it only moves if it has to. A laptop has room for the
+            whole sentence and holds it still, which is what a countdown wants;
+            a phone does not, and clipping it would drop the matchup and the
+            kickoff time — the two parts worth reading. So the same tape that
+            carries the scores carries this too, and Tape decides which it is by
+            measuring.
+
+            The signature deliberately includes the countdown text: the digits
+            are tabular, so a minute ticking by measures identically and the
+            animation is never restarted, while dropping a unit — "2h 5m" down
+            to "5m" — really does change the width and should re-measure. */}
+        <Tape signature={`${line}|${game?.id ?? 0}|${narrow}`}>
+          <span className="ticker-item">
+            <strong>{line}</strong>
+            {game ? (
+              <>
+                <Dot />
+                <span aria-label={matchupLine(game, narrow)}>
+                  <span aria-hidden className="ticker-score">
+                    <Side logo={game.awayLogo} name={narrow ? game.awayAbbr : game.awayTeam} full={game.awayTeam} />
+                    at
+                    <Side logo={game.homeLogo} name={narrow ? game.homeAbbr : game.homeTeam} full={game.homeTeam} />
+                  </span>
                 </span>
-              </span>
-              <Dot />
-              <LocalTime iso={state.game.startTime} mode="kickoff" showZone />
-            </>
-          ) : null}
-        </span>
+                <Dot />
+                <LocalTime iso={game.startTime} mode="kickoff" showZone />
+              </>
+            ) : null}
+          </span>
+        </Tape>
       </Bar>
     );
   }
@@ -213,44 +227,58 @@ function Dot() {
  * content rather than fixed, so twelve games scroll at the same reading speed
  * as three rather than three times as fast.
  */
-function Marquee({ items }: { items: Item[] }) {
+function Tape({ children, signature }: { children: React.ReactNode; signature: string }) {
   const run = useRef<HTMLSpanElement>(null);
+  const window_ = useRef<HTMLDivElement>(null);
   const [seconds, setSeconds] = useState(0);
-
-  // The content itself, not the array holding it: a poll that returns the same
-  // scores rebuilds the array, and re-measuring on that would restart the
-  // animation and jump the tape back to the start.
-  const signature = items.map((i) => i.text).join("|");
 
   useEffect(() => {
     const measure = () => {
       const width = run.current?.offsetWidth ?? 0;
-      setSeconds(width > 0 ? width / PIXELS_PER_SECOND : 0);
+      const visible = window_.current?.offsetWidth ?? 0;
+      // A run that already fits has nothing to scroll past, and looping it
+      // would be motion for its own sake. Twelve scores never fit; a countdown
+      // fits on a laptop and does not on a phone, and this is what tells them
+      // apart without either one having to be told which it is.
+      setSeconds(width > visible ? width / PIXELS_PER_SECOND : 0);
     };
     measure();
     window.addEventListener("resize", measure);
     return () => window.removeEventListener("resize", measure);
   }, [signature]);
 
-  const run1 = items.map((item) => <Cell item={item} key={item.key} />);
-  const run2 = items.map((item) => <Cell item={item} key={`echo-${item.key}`} />);
+  const scrolling = seconds > 0;
 
   return (
-    <div className="ticker-window">
-      <div
-        className="ticker-track"
-        style={seconds > 0 ? { animationDuration: `${seconds}s` } : undefined}
-      >
+    <div className={scrolling ? "ticker-window" : "ticker-window is-static"} ref={window_}>
+      <div className="ticker-track" style={scrolling ? { animationDuration: `${seconds}s` } : undefined}>
         <span className="ticker-run" ref={run}>
-          {run1}
+          {children}
         </span>
         {/* The understudy. Hidden from screen readers, which would otherwise
-            hear every score twice. */}
+            hear every score twice, and hidden outright when nothing scrolls. */}
         <span className="ticker-run" aria-hidden>
-          {run2}
+          {children}
         </span>
       </div>
     </div>
+  );
+}
+
+/**
+ * The scores, as a run of cells for the tape to carry.
+ *
+ * The signature is the content itself rather than the array holding it: a poll
+ * that returns the same scores rebuilds the array, and re-measuring on that
+ * would restart the animation and jump the tape back to the start.
+ */
+function Marquee({ items }: { items: Item[] }) {
+  return (
+    <Tape signature={items.map((i) => i.text).join("|")}>
+      {items.map((item) => (
+        <Cell item={item} key={item.key} />
+      ))}
+    </Tape>
   );
 }
 
@@ -321,8 +349,9 @@ function Side({
   logo: string | null;
   name: string;
   full: string;
-  rank: number | null;
-  score: number | null;
+  /** Both absent on a countdown, where the game has not been played yet. */
+  rank?: number | null;
+  score?: number | null;
   comma?: boolean;
 }) {
   return (
@@ -332,10 +361,12 @@ function Side({
       <span className="ticker-name">{name}</span>
       {/* Score and its comma are one flex item, or the row's gap opens up
           between the number and the punctuation that belongs to it. */}
-      <span className="ticker-num">
-        <b>{score ?? 0}</b>
-        {comma ? "," : null}
-      </span>
+      {score !== undefined ? (
+        <span className="ticker-num">
+          <b>{score ?? 0}</b>
+          {comma ? "," : null}
+        </span>
+      ) : null}
     </span>
   );
 }
