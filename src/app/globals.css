@@ -936,33 +936,6 @@ dialog.modal[open]::backdrop {
   );
 }
 
-/* Content that already fits: no loop, no second copy, and no fade at the ends
-   — the fade is there to sell things entering and leaving, and over a sentence
-   that is simply sitting there it just dims the first and last words. */
-.ticker-window.is-static {
-  -webkit-mask-image: none;
-  mask-image: none;
-}
-
-.ticker-window.is-static .ticker-track {
-  animation: none;
-  width: 100%;
-}
-
-.ticker-window.is-static .ticker-run[aria-hidden] {
-  display: none;
-}
-
-/* The trailing gap and bullet space one lap from the next. Standing still there
-   is no next lap, so they would read as a sentence ending in a stray dot. */
-.ticker-window.is-static .ticker-item {
-  padding-right: 0;
-}
-
-.ticker-window.is-static .ticker-item::after {
-  content: none;
-}
-
 .ticker-track {
   display: flex;
   width: max-content;
@@ -996,6 +969,15 @@ dialog.modal[open]::backdrop {
   display: flex;
   flex: none;
   white-space: nowrap;
+}
+
+/* The run's own content, measured apart from the padding the run may carry to
+   reach the width of the bar — the loop is one content-or-bar width, whichever
+   is larger, and reading that off the padded box instead would feed the
+   measurement its own output. */
+.ticker-run-content {
+  display: flex;
+  flex: none;
 }
 
 .ticker-item {
@@ -1172,8 +1154,11 @@ dialog.modal[open]::backdrop {
     display: none;
   }
 
-  /* The second run is decoration for an animation that is no longer running. */
-  .ticker-track > .ticker-run[aria-hidden] {
+  /* The second run is decoration for an animation that is no longer running.
+     Matched on the value rather than on the attribute being present, so an
+     explicit aria-hidden="false" on the run that must stay visible cannot be
+     read as a request to hide it. */
+  .ticker-track > .ticker-run[aria-hidden="true"] {
     display: none;
   }
 }

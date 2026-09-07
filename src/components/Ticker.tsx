@@ -228,38 +228,53 @@ function Dot() {
  * as three rather than three times as fast.
  */
 function Tape({ children, signature }: { children: React.ReactNode; signature: string }) {
-  const run = useRef<HTMLSpanElement>(null);
-  const window_ = useRef<HTMLDivElement>(null);
-  const [seconds, setSeconds] = useState(0);
+  const content = useRef<HTMLSpanElement>(null);
+  const frame = useRef<HTMLDivElement>(null);
+  const [loop, setLoop] = useState(0);
 
   useEffect(() => {
     const measure = () => {
-      const width = run.current?.offsetWidth ?? 0;
-      const visible = window_.current?.offsetWidth ?? 0;
-      // A run that already fits has nothing to scroll past, and looping it
-      // would be motion for its own sake. Twelve scores never fit; a countdown
-      // fits on a laptop and does not on a phone, and this is what tells them
-      // apart without either one having to be told which it is.
-      setSeconds(width > visible ? width / PIXELS_PER_SECOND : 0);
+      const natural = content.current?.offsetWidth ?? 0;
+      const visible = frame.current?.offsetWidth ?? 0;
+      // Two copies only cover the bar if one copy is at least as wide as the
+      // bar. A dozen scores always are; one countdown sentence on a laptop is
+      // not, and left alone it would tow an empty stretch in behind it and
+      // then jump when the loop restarted. Padding the run out to the frame
+      // keeps the -50% slide exact and spends the difference as a gap between
+      // laps, which is what a tape looks like anyway.
+      setLoop(natural > 0 ? Math.max(natural, visible) : 0);
     };
     measure();
     window.addEventListener("resize", measure);
     return () => window.removeEventListener("resize", measure);
   }, [signature]);
 
-  const scrolling = seconds > 0;
+  // Both copies carry the same padding, or they are not copies and the seam
+  // lands in the wrong place.
+  const run = (ref: React.Ref<HTMLSpanElement> | undefined, echo: boolean) => (
+    <span
+      className="ticker-run"
+      style={loop > 0 ? { minWidth: loop } : undefined}
+      // Never aria-hidden="false": React renders that as a real attribute, and
+      // a bare [aria-hidden] selector matches it as readily as "true".
+      aria-hidden={echo || undefined}
+    >
+      <span className="ticker-run-content" ref={ref}>
+        {children}
+      </span>
+    </span>
+  );
 
   return (
-    <div className={scrolling ? "ticker-window" : "ticker-window is-static"} ref={window_}>
-      <div className="ticker-track" style={scrolling ? { animationDuration: `${seconds}s` } : undefined}>
-        <span className="ticker-run" ref={run}>
-          {children}
-        </span>
+    <div className="ticker-window" ref={frame}>
+      <div
+        className="ticker-track"
+        style={loop > 0 ? { animationDuration: `${loop / PIXELS_PER_SECOND}s` } : undefined}
+      >
+        {run(content, false)}
         {/* The understudy. Hidden from screen readers, which would otherwise
-            hear every score twice, and hidden outright when nothing scrolls. */}
-        <span className="ticker-run" aria-hidden>
-          {children}
-        </span>
+            hear every score twice. */}
+        {run(undefined, true)}
       </div>
     </div>
   );
