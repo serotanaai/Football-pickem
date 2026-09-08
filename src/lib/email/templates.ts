@@ -172,10 +172,9 @@ export function resultsEmail(to: Recipient, d: ResultsData, leagueUrl: string, u
  * The 2.5x game, drawn rather than described.
  *
  * Crests, ranks, where it is played and when. The logos are remote images and
- * most clients block those until the reader says otherwise, so every one
- * carries its school as alt text and the names are printed underneath anyway —
- * with images off this still reads as a matchup, which is the only version of
- * it some people will ever see.
+ * most clients block those until the reader says otherwise, so each school is
+ * printed underneath its crest as text — with images off this still reads as a
+ * matchup, which is the only version of it some people will ever see.
  */
 export function previewEmail(to: Recipient, d: PreviewData, leagueUrl: string, unsub: string) {
   const m = d.matchup;
@@ -219,7 +218,7 @@ export function previewEmail(to: Recipient, d: PreviewData, leagueUrl: string, u
   const body =
     `<p style="margin:0 0 4px;font-size:19px;font-weight:700;">Week ${d.week}&rsquo;s matchup of the week</p>` +
     card +
-    `<p style="margin:0;">It is worth <b>2.5&times;</b> in ${esc(d.leagueName)}, so it is the one to get right.</p>`;
+    `<p style="margin:0;">It is worth <b>2.5&times; Points</b> in ${esc(d.leagueName)}, so it is the one to get right.</p>`;
 
   const text =
     `Week ${d.week}'s matchup of the week\n\n` +
@@ -227,7 +226,7 @@ export function previewEmail(to: Recipient, d: PreviewData, leagueUrl: string, u
       ? `${game}\n${d.kickoff}${m?.broadcast ? ` - ${m.broadcast}` : ""}\n` +
         `${[m?.venue, m?.neutralSite ? "neutral site" : null].filter(Boolean).join(" - ")}\n\n`
       : `The week ${d.week} board is up.\n\n`) +
-    `It is worth 2.5x in ${d.leagueName}, so it is the one to get right.\n\n` +
+    `It is worth 2.5x Points in ${d.leagueName}, so it is the one to get right.\n\n` +
     `Make your picks: ${leagueUrl}\n\nUnsubscribe: ${unsub}`;
 
   return {
