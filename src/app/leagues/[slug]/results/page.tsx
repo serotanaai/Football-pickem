@@ -73,7 +73,17 @@ export default async function ResultsPage({
         rank: result?.week_rank ?? null,
       };
     })
-    .sort((a, b) => b.points - a.points || a.name.localeCompare(b.name));
+    // week_rank first, because it is the only thing that knows the league's
+    // tiebreak. Sorting on points and falling back to the alphabet put the
+    // member who actually won the week below somebody they had beaten, under a
+    // banner naming them the winner. Members who did not pick have no rank and
+    // sit at the bottom.
+    .sort(
+      (a, b) =>
+        (a.rank ?? Number.MAX_SAFE_INTEGER) - (b.rank ?? Number.MAX_SAFE_INTEGER) ||
+        b.points - a.points ||
+        a.name.localeCompare(b.name),
+    );
 
   // A week has a winner when the week is over, and says nothing before then.
   // One graded game used to be enough here, which crowned somebody at lunchtime
@@ -136,7 +146,7 @@ export default async function ResultsPage({
           <tbody>
             {rows.map((row, index) => (
               <tr key={row.user_id}>
-                <td className="muted">{ordinal(index + 1)}</td>
+                <td className="muted">{ordinal(row.rank ?? index + 1)}</td>
                 <td style={{ fontWeight: row.user_id === userId ? 700 : 500 }}>{row.name}</td>
                 <td style={{ textAlign: "right", fontVariantNumeric: "tabular-nums" }}>
                   <strong>{row.points.toLocaleString()}</strong>

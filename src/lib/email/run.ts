@@ -88,7 +88,7 @@ export async function runEmailSequence(options: RunOptions = {}): Promise<RunSum
   const leagueIds = [...new Set(due.map((r) => r.league_id))];
   const weeks = [...new Set(due.map((r) => r.week))];
 
-  const [tokens, boards, standings, submissions] = await Promise.all([
+  const [tokens, boards, standings, submissions, memberships] = await Promise.all([
     db.from("profiles").select("id, unsubscribe_token").in("id", userIds),
     db
       .from("league_weeks")
@@ -97,7 +97,7 @@ export async function runEmailSequence(options: RunOptions = {}): Promise<RunSum
       .in("week", weeks),
     db
       .from("weekly_results_ranked")
-      .select("league_id, week, user_id, points, correct, picks_made, week_rank, week_won")
+      .select("league_id, week, user_id, points, correct, incorrect, picks_made, week_rank, week_won")
       .in("league_id", leagueIds)
       .in("week", weeks),
     db
@@ -105,6 +105,11 @@ export async function runEmailSequence(options: RunOptions = {}): Promise<RunSum
       .select("league_id, week, user_id, pick_count")
       .in("league_id", leagueIds)
       .in("week", weeks),
+    // Everybody in the league, not only everybody who picked. A member who sat
+    // the week out belongs in the table on nil — the Rankings page shows them,
+    // and an email that disagrees with the page it links to is worse than one
+    // that says less.
+    db.from("league_members").select("league_id, user_id").in("league_id", leagueIds),
   ]);
 
   const tokenOf = new Map((tokens.data ?? []).map((p) => [p.id, p.unsubscribe_token]));
@@ -138,23 +143,47 @@ export async function runEmailSequence(options: RunOptions = {}): Promise<RunSum
     }
   }
 
-  // Who took each week, for the line in the results mail that names them.
+  // Display names for everybody, so the week's table can be built from the roster.
   const { data: names } = await db.from("profiles").select("id, display_name");
   const nameOf = new Map((names ?? []).map((p) => [p.id, p.display_name ?? "Someone"]));
-  const winnerOf = new Map<string, { name: string; points: number }>();
-  for (const row of standings.data ?? []) {
-    if (row.week_rank === 1 && row.league_id && typeof row.week === "number" && row.user_id) {
-      winnerOf.set(key(row.league_id, row.week), {
-        name: nameOf.get(row.user_id) ?? "Someone",
-        points: row.points ?? 0,
-      });
-    }
-  }
-  const mineOf = new Map(
+  const scoreOf = new Map(
     (standings.data ?? [])
       .filter((r) => r.league_id && typeof r.week === "number" && r.user_id)
       .map((r) => [`${r.league_id}:${r.week}:${r.user_id}`, r]),
   );
+
+  // The week's table, per league-week, sorted and numbered exactly as the
+  // Rankings page does it: points first, then name, positional numbering.
+  const tableOf = new Map<string, { user_id: string; name: string; points: number; correct: number; incorrect: number; rank: number | null }[]>();
+  for (const week of weeks) {
+    for (const leagueId of leagueIds) {
+      const rows = (memberships.data ?? [])
+        .filter((m) => m.league_id === leagueId)
+        .map((m) => {
+          const score = scoreOf.get(`${leagueId}:${week}:${m.user_id}`);
+          return {
+            user_id: m.user_id,
+            name: nameOf.get(m.user_id) ?? "Someone",
+            points: score?.points ?? 0,
+            correct: score?.correct ?? 0,
+            incorrect: score?.incorrect ?? 0,
+            rank: score?.week_rank ?? null,
+          };
+        })
+        // week_rank, not position. Two members level on points are separated by
+        // the league's own tiebreak, and only week_rank knows how — sorting on
+        // points and falling back to the alphabet would have put the member who
+        // actually won the week second in a table headed "You won week 1".
+        // A member who did not pick has no rank and sits at the bottom.
+        .sort(
+          (a, b) =>
+            (a.rank ?? Number.MAX_SAFE_INTEGER) - (b.rank ?? Number.MAX_SAFE_INTEGER) ||
+            b.points - a.points ||
+            a.name.localeCompare(b.name),
+        );
+      if (rows.length > 0) tableOf.set(`${leagueId}:${week}`, rows);
+    }
+  }
 
   for (const row of due) {
     const token = tokenOf.get(row.user_id);
@@ -173,20 +202,24 @@ export async function runEmailSequence(options: RunOptions = {}): Promise<RunSum
     let built: { subject: string; html: string; text: string } | null = null;
 
     if (row.kind === "results") {
-      const mine = mineOf.get(`${row.league_id}:${row.week}:${row.user_id}`);
-      const winner = winnerOf.get(key(row.league_id, row.week));
+      const mine = scoreOf.get(`${row.league_id}:${row.week}:${row.user_id}`);
+      const table = tableOf.get(key(row.league_id, row.week)) ?? [];
+      const standings = table.map((r, index) => ({
+        position: r.rank ?? index + 1,
+        name: r.name,
+        points: r.points,
+        correct: r.correct,
+        incorrect: r.incorrect,
+        isYou: r.user_id === row.user_id,
+      }));
       built = resultsEmail(
         to,
         {
           leagueName: row.league_name,
           week: row.week,
-          rank: mine?.week_rank ?? null,
-          points: mine?.points ?? 0,
-          correct: mine?.correct ?? 0,
-          played: mine?.picks_made ?? 0,
+          position: standings.find((r) => r.isYou)?.position ?? null,
           wonWeek: mine?.week_won === true,
-          winnerName: winner?.name ?? null,
-          winnerPoints: winner?.points ?? null,
+          standings,
         },
         leagueUrl,
         unsub,

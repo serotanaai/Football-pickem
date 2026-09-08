@@ -13,18 +13,25 @@
 
 export type Recipient = { name: string; email: string };
 
+/** One line of the week's table. */
+export type StandingRow = {
+  /** 1-based, and positional — the same number the Rankings page prints. */
+  position: number;
+  name: string;
+  points: number;
+  correct: number;
+  incorrect: number;
+  isYou: boolean;
+};
+
 export type ResultsData = {
   leagueName: string;
   week: number;
-  /** Where the reader placed, and what they scored. */
-  rank: number | null;
-  points: number;
-  correct: number;
-  played: number;
+  /** Where the reader placed. Null only if the league has no rows at all. */
+  position: number | null;
   wonWeek: boolean;
-  /** Whoever took the week, for the line that says who to beat. */
-  winnerName: string | null;
-  winnerPoints: number | null;
+  /** Everybody, in the league's own order. */
+  standings: StandingRow[];
 };
 
 export type PreviewData = {
@@ -75,27 +82,70 @@ function ranked(name: string, rank: number | null): string {
   return rank ? `#${rank} ${name}` : name;
 }
 
+/**
+ * The week, told twice: where the reader finished, then the whole table.
+ *
+ * These were two emails — one for the winner, one for everybody else, each
+ * naming the winner in prose. The table makes that line redundant and answers
+ * the question the prose could not: not just who won, but where everyone landed
+ * and by how much. A pick'em is a league, and a league is a table.
+ *
+ * The order and the numbering are the Rankings page's, deliberately: points
+ * first, then name, numbered by position. An email that disagrees with the page
+ * it links to is worse than one that says less.
+ */
 export function resultsEmail(to: Recipient, d: ResultsData, leagueUrl: string, unsub: string) {
-  const placed = d.rank ? `You finished ${ordinal(d.rank)}` : "You did not have a scored board";
   const headline = d.wonWeek
     ? `You won week ${d.week}.`
-    : `Week ${d.week} is in the books.`;
+    : d.position
+      ? `You finished ${ordinal(d.position)} in week ${d.week}.`
+      : `Week ${d.week} is in the books.`;
 
-  const chase =
-    d.winnerName && !d.wonWeek
-      ? ` ${esc(d.winnerName)} took the week with ${d.winnerPoints} points.`
-      : "";
+  const rows = d.standings
+    .map((row) => {
+      const bg = row.isYou ? "background:#f1f8f2;" : "";
+      const weight = row.isYou ? "font-weight:700;" : "";
+      return (
+        `<tr>` +
+        `<td style="${bg}${weight}padding:7px 8px;border-top:1px solid #e3e3df;color:${MUTED};width:34px;">${row.position}</td>` +
+        `<td style="${bg}${weight}padding:7px 8px;border-top:1px solid #e3e3df;">${esc(row.name)}</td>` +
+        `<td align="right" style="${bg}${weight}padding:7px 8px;border-top:1px solid #e3e3df;">${row.points.toLocaleString()}</td>` +
+        `<td align="right" style="${bg}${weight}padding:7px 8px;border-top:1px solid #e3e3df;color:${MUTED};">${row.correct}&ndash;${row.incorrect}</td>` +
+        `</tr>`
+      );
+    })
+    .join("");
+
+  const table =
+    `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" ` +
+    `style="border-collapse:collapse;font-size:14px;margin-top:16px;">` +
+    `<tr>` +
+    `<th align="left" style="padding:0 8px 6px;font-size:11px;letter-spacing:0.06em;` +
+    `text-transform:uppercase;color:${MUTED};font-weight:650;">#</th>` +
+    `<th align="left" style="padding:0 8px 6px;font-size:11px;letter-spacing:0.06em;` +
+    `text-transform:uppercase;color:${MUTED};font-weight:650;">Member</th>` +
+    `<th align="right" style="padding:0 8px 6px;font-size:11px;letter-spacing:0.06em;` +
+    `text-transform:uppercase;color:${MUTED};font-weight:650;">Points</th>` +
+    `<th align="right" style="padding:0 8px 6px;font-size:11px;letter-spacing:0.06em;` +
+    `text-transform:uppercase;color:${MUTED};font-weight:650;">Record</th>` +
+    `</tr>${rows}</table>`;
 
   const body =
     `<p style="margin:0 0 12px;font-size:19px;font-weight:700;">${esc(headline)}</p>` +
-    `<p style="margin:0 0 10px;">${esc(d.leagueName)} &middot; Week ${d.week}</p>` +
-    `<p style="margin:0;">${placed} with <b>${d.points} points</b>, ` +
-    `getting <b>${d.correct} of ${d.played}</b> right.${chase}</p>`;
+    `<p style="margin:0;">${esc(d.leagueName)} &middot; Week ${d.week}</p>` +
+    table;
 
+  const width = Math.max(...d.standings.map((r) => r.name.length), 6);
   const text =
     `${headline}\n${d.leagueName} - Week ${d.week}\n\n` +
-    `${placed} with ${d.points} points, getting ${d.correct} of ${d.played} right.` +
-    (chase ? chase.replace(/<[^>]+>/g, "") : "") +
+    d.standings
+      .map(
+        (r) =>
+          `${String(r.position).padStart(2)}. ${r.name.padEnd(width)}  ` +
+          `${String(r.points).padStart(5)}  ${r.correct}-${r.incorrect}` +
+          (r.isYou ? "   <- you" : ""),
+      )
+      .join("\n") +
     `\n\nStandings: ${leagueUrl}\n\nUnsubscribe: ${unsub}`;
 
   return {
