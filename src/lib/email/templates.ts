@@ -38,7 +38,6 @@ export type PreviewData = {
 export type ReminderData = {
   leagueName: string;
   week: number;
-  remaining: number;
   lockAt: string;
   /** True for the five-hour message, which says so rather than nagging twice. */
   lastCall: boolean;
@@ -139,16 +138,19 @@ export function reminderEmail(to: Recipient, d: ReminderData, picksUrl: string, 
     ? `Picks close in a few hours.`
     : `You have not made your week ${d.week} picks.`;
 
+  // No count of games left. Picks are submitted once, and whatever has kicked
+  // off by then is gone — so "9 games still open" would be both a moving number
+  // and a target nobody can hit once the first game starts.
   const body =
     `<p style="margin:0 0 12px;font-size:19px;font-weight:700;">${esc(headline)}</p>` +
     `<p style="margin:0 0 10px;">${esc(d.leagueName)} &middot; Week ${d.week}</p>` +
-    `<p style="margin:0;"><b>${d.remaining} ${d.remaining === 1 ? "game" : "games"}</b> still open. ` +
-    `The board locks at first kickoff, ${esc(d.lockAt)}.</p>`;
+    `<p style="margin:0;">Picks go in once, and each game closes at its own kickoff. ` +
+    `The first is ${esc(d.lockAt)}.</p>`;
 
   const text =
     `${headline}\n${d.leagueName} - Week ${d.week}\n\n` +
-    `${d.remaining} ${d.remaining === 1 ? "game" : "games"} still open. ` +
-    `The board locks at first kickoff, ${d.lockAt}.\n\n` +
+    `Picks go in once, and each game closes at its own kickoff. ` +
+    `The first is ${d.lockAt}.\n\n` +
     `Make your picks: ${picksUrl}\n\nUnsubscribe: ${unsub}`;
 
   return {

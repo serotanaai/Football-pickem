@@ -212,12 +212,9 @@ export async function runEmailSequence(options: RunOptions = {}): Promise<RunSum
         unsub,
       );
     } else {
-      const total = board?.game_count ?? 0;
-      const done = pickedOf.get(`${row.league_id}:${row.week}:${row.user_id}`) ?? 0;
-      const remaining = Math.max(0, total - done);
-      // The board filled up between due_emails running and this loop reaching
-      // it. Nothing to nag about any more.
-      if (remaining === 0) {
+      // Submitted between due_emails running and this loop reaching them.
+      // Presence of the row is the whole test — see openBoards.
+      if (pickedOf.has(`${row.league_id}:${row.week}:${row.user_id}`)) {
         summary.skipped += 1;
         continue;
       }
@@ -226,7 +223,6 @@ export async function runEmailSequence(options: RunOptions = {}): Promise<RunSum
         {
           leagueName: row.league_name,
           week: row.week,
-          remaining,
           lockAt: whenText(row.lock_at),
           lastCall: row.kind === "last_call",
         },
