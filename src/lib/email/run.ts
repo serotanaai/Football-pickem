@@ -123,21 +123,34 @@ export async function runEmailSequence(options: RunOptions = {}): Promise<RunSum
   const featuredIds = [...new Set((boards.data ?? []).map((b) => b.featured_game_id).filter(
     (id): id is number => typeof id === "number",
   ))];
-  const gameOf = new Map<number, { away: string; home: string; awayRank: number | null; homeRank: number | null; start: string }>();
+  type Featured = {
+    away: string; awayRank: number | null; awayLogo: string | null;
+    home: string; homeRank: number | null; homeLogo: string | null;
+    venue: string | null; neutralSite: boolean; broadcast: string | null;
+    start: string;
+  };
+  const gameOf = new Map<number, Featured>();
   if (featuredIds.length > 0) {
     const { data: games } = await db
       .from("games")
-      .select("id, start_time, home_team_id, away_team_id, home_rank, away_rank")
+      .select(
+        "id, start_time, home_team_id, away_team_id, home_rank, away_rank, venue, neutral_site, broadcast",
+      )
       .in("id", featuredIds);
     const teamIds = [...new Set((games ?? []).flatMap((g) => [g.home_team_id, g.away_team_id]))];
-    const { data: teams } = await db.from("teams").select("id, school").in("id", teamIds);
-    const school = new Map((teams ?? []).map((t) => [t.id, t.school]));
+    const { data: teams } = await db.from("teams").select("id, school, logo").in("id", teamIds);
+    const team = new Map((teams ?? []).map((t) => [t.id, t]));
     for (const g of games ?? []) {
       gameOf.set(g.id, {
-        away: school.get(g.away_team_id) ?? "TBD",
-        home: school.get(g.home_team_id) ?? "TBD",
+        away: team.get(g.away_team_id)?.school ?? "TBD",
         awayRank: g.away_rank,
+        awayLogo: team.get(g.away_team_id)?.logo ?? null,
+        home: team.get(g.home_team_id)?.school ?? "TBD",
         homeRank: g.home_rank,
+        homeLogo: team.get(g.home_team_id)?.logo ?? null,
+        venue: g.venue,
+        neutralSite: g.neutral_site === true,
+        broadcast: g.broadcast,
         start: g.start_time,
       });
     }
@@ -234,9 +247,14 @@ export async function runEmailSequence(options: RunOptions = {}): Promise<RunSum
           matchup: featured
             ? {
                 away: featured.away,
-                home: featured.home,
                 awayRank: featured.awayRank,
+                awayLogo: featured.awayLogo,
+                home: featured.home,
                 homeRank: featured.homeRank,
+                homeLogo: featured.homeLogo,
+                venue: featured.venue,
+                neutralSite: featured.neutralSite,
+                broadcast: featured.broadcast,
               }
             : null,
           kickoff: whenText(featured?.start ?? row.lock_at),

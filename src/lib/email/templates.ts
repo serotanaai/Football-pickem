@@ -38,7 +38,18 @@ export type PreviewData = {
   leagueName: string;
   week: number;
   /** Absent when the board has no featured game yet. */
-  matchup: { away: string; home: string; awayRank: number | null; homeRank: number | null } | null;
+  matchup: {
+    away: string;
+    awayRank: number | null;
+    awayLogo: string | null;
+    home: string;
+    homeRank: number | null;
+    homeLogo: string | null;
+    venue: string | null;
+    /** Changes the sentence: a neutral-site game is not played "at" anybody. */
+    neutralSite: boolean;
+    broadcast: string | null;
+  } | null;
   kickoff: string;
 };
 
@@ -157,22 +168,65 @@ export function resultsEmail(to: Recipient, d: ResultsData, leagueUrl: string, u
   };
 }
 
+/**
+ * The 2.5x game, drawn rather than described.
+ *
+ * Crests, ranks, where it is played and when. The logos are remote images and
+ * most clients block those until the reader says otherwise, so every one
+ * carries its school as alt text and the names are printed underneath anyway —
+ * with images off this still reads as a matchup, which is the only version of
+ * it some people will ever see.
+ */
 export function previewEmail(to: Recipient, d: PreviewData, leagueUrl: string, unsub: string) {
-  const game = d.matchup
-    ? `${ranked(d.matchup.away, d.matchup.awayRank)} at ${ranked(d.matchup.home, d.matchup.homeRank)}`
+  const m = d.matchup;
+  const game = m
+    ? `${ranked(m.away, m.awayRank)} ${m.neutralSite ? "vs" : "at"} ${ranked(m.home, m.homeRank)}`
     : null;
 
+  const side = (name: string, rank: number | null, logo: string | null) =>
+    `<td align="center" valign="middle" width="40%" style="padding:12px 4px 4px;">` +
+    (logo
+      // alt is deliberately empty. The school is printed directly underneath, so
+      // the crest carries nothing the text does not — and with images blocked,
+      // which is most clients until the reader says otherwise, alt text here
+      // put the name on the row twice and overflowed the column doing it.
+      ? `<img src="${esc(logo)}" width="56" height="56" alt="" ` +
+        `style="display:block;margin:0 auto 8px;width:56px;height:56px;" />`
+      : "") +
+    (rank ? `<span style="color:${MUTED};font-weight:700;font-size:13px;">#${rank}</span> ` : "") +
+    `<span style="font-weight:700;font-size:15px;">${esc(name)}</span>` +
+    `</td>`;
+
+  // Where it is played, and the fact that a neutral site is one. "Louisville at
+  // Ole Miss" is simply untrue of a game in Nashville.
+  const place = m
+    ? [m.venue, m.neutralSite ? "neutral site" : null].filter(Boolean).join(" &middot; ")
+    : "";
+  const when = m ? [d.kickoff, m.broadcast].filter(Boolean).join(" &middot; ") : d.kickoff;
+
+  const card = m
+    ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" ` +
+      `style="border-collapse:collapse;margin:18px 0 14px;background:#f7f8f6;border-radius:10px;">` +
+      `<tr>${side(m.away, m.awayRank, m.awayLogo)}` +
+      `<td align="center" valign="middle" width="20%" style="color:${MUTED};font-size:13px;padding:4px;">` +
+      `${m.neutralSite ? "vs" : "at"}</td>` +
+      `${side(m.home, m.homeRank, m.homeLogo)}</tr>` +
+      `<tr><td colspan="3" align="center" style="padding:2px 12px 14px;color:${MUTED};font-size:13px;line-height:1.5;">` +
+      `${when}${place ? `<br />${place}` : ""}</td></tr>` +
+      `</table>`
+    : `<p style="margin:0 0 10px;">The week ${d.week} board is up.</p>`;
+
   const body =
-    `<p style="margin:0 0 12px;font-size:19px;font-weight:700;">Week ${d.week}&rsquo;s matchup of the week</p>` +
-    (game
-      ? `<p style="margin:0 0 10px;font-size:17px;font-weight:600;">${esc(game)}</p>` +
-        `<p style="margin:0 0 10px;color:${MUTED};">${esc(d.kickoff)}</p>`
-      : `<p style="margin:0 0 10px;">The week ${d.week} board is up.</p>`) +
+    `<p style="margin:0 0 4px;font-size:19px;font-weight:700;">Week ${d.week}&rsquo;s matchup of the week</p>` +
+    card +
     `<p style="margin:0;">It is worth <b>2.5&times;</b> in ${esc(d.leagueName)}, so it is the one to get right.</p>`;
 
   const text =
     `Week ${d.week}'s matchup of the week\n\n` +
-    (game ? `${game}\n${d.kickoff}\n\n` : `The week ${d.week} board is up.\n\n`) +
+    (game
+      ? `${game}\n${d.kickoff}${m?.broadcast ? ` - ${m.broadcast}` : ""}\n` +
+        `${[m?.venue, m?.neutralSite ? "neutral site" : null].filter(Boolean).join(" - ")}\n\n`
+      : `The week ${d.week} board is up.\n\n`) +
     `It is worth 2.5x in ${d.leagueName}, so it is the one to get right.\n\n` +
     `Make your picks: ${leagueUrl}\n\nUnsubscribe: ${unsub}`;
 
