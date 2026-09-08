@@ -77,6 +77,8 @@ export async function syncWeek(db: Supabase, season: number, week: number) {
 export type RankingSync = {
   week: number;
   stored: number;
+  /** Ranked teams the teams table has never heard of, if any. */
+  skipped: number[];
   /** Null when the call worked, whether or not it found a poll. */
   error: string | null;
 };
@@ -101,17 +103,38 @@ export async function syncRankings(
 ): Promise<RankingSync> {
   try {
     const rankings = await fetchRankings(season, week);
-    if (rankings.length === 0) return { week, stored: 0, error: null };
+    if (rankings.length === 0) return { week, stored: 0, skipped: [], error: null };
+
+    // Only teams we actually have.
+    //
+    // rankings.team_id is a foreign key, and a poll can name a team the teams
+    // table has never seen — one that has not appeared in a scoreboard we
+    // synced. Postgres rejects the whole statement for that one row, so a
+    // single unknown team took all twenty-five down with it and the table sat
+    // empty for a season. The poll is worth more than the completeness of any
+    // one line in it, so the strangers are dropped and named rather than
+    // allowed to lose the rest.
+    const ids = [...new Set(rankings.map((r) => r.team_id))];
+    const { data: known } = await db.from("teams").select("id").in("id", ids);
+    const haveIds = new Set((known ?? []).map((t) => t.id));
+
+    const usable = rankings.filter((r) => haveIds.has(r.team_id));
+    const skipped = ids.filter((id) => !haveIds.has(id));
+
+    if (usable.length === 0) {
+      return { week, stored: 0, skipped, error: "no ranked team is in the teams table" };
+    }
 
     const { error } = await db.from("rankings").upsert(
-      rankings.map((r) => ({ ...r, updated_at: new Date().toISOString() })),
+      usable.map((r) => ({ ...r, updated_at: new Date().toISOString() })),
     );
     if (error) throw new Error(error.message);
-    return { week, stored: rankings.length, error: null };
+    return { week, stored: usable.length, skipped, error: null };
   } catch (cause) {
     return {
       week,
       stored: 0,
+      skipped: [],
       error: cause instanceof Error ? cause.message : "rankings fetch failed",
     };
   }
