@@ -145,8 +145,8 @@ export default async function PicksPage({
             Week {week} opens when the AP Top 25 lands.
           </p>
           <p className="muted" style={{ margin: 0, fontSize: "0.9rem" }}>
-            The poll comes out on Sunday. The slate is cut from it, so it is worth the wait —
-            check back then and the board will be here.
+            The poll comes out on Sunday, and the slate is cut from it — every league waits for
+            the same one. Check back then and the board will be here.
           </p>
         </div>
       ) : boardGames.length === 0 ? (
