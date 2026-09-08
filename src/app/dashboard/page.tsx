@@ -194,7 +194,7 @@ export default async function DashboardPage() {
                     </div>
                     {owed ? (
                       <span style={{ flex: "none" }}>
-                        <PicksDue lockAt={owed.lockAt} remaining={owed.remaining} now={now} />
+                        <PicksDue />
                       </span>
                     ) : null}
                   </div>

@@ -8,46 +8,10 @@ import { Badge } from "@/components/Badge";
  * that means "you still owe picks" only reads as urgent while it is the only
  * thing on the row wearing that colour.
  *
- * The wording carries the urgency rather than the styling: how many are owed
- * while there is still time, a countdown once the lock is close.
+ * One fixed sentence, whatever the state of the board or the clock. It says
+ * the thing it is there to say and reads the same on every card, which is what
+ * makes a row of them scannable.
  */
-export function PicksDue({
-  lockAt,
-  remaining,
-  now,
-}: {
-  lockAt: string | null;
-  remaining: number;
-  now: number;
-}) {
-  return <Badge tone="danger">{dueLabel(lockAt, remaining, now)}</Badge>;
-}
-
-/**
- * One badge carries both facts, and which one leads depends on how long is
- * left.
- *
- * With days to go the number of games is the useful part — it is the size of
- * the job being put off. Inside a day the clock takes over, because by then how
- * many are left matters far less than the fact that they are about to stop
- * being pickable at all.
- */
-export function dueLabel(lockAt: string | null, remaining: number, now: number): string {
-  const count = `${remaining} ${remaining === 1 ? "pick" : "picks"} due`;
-  if (!lockAt) return count;
-
-  const ms = new Date(lockAt).getTime() - now;
-  // Already locked. The caller filters these out, so this is the belt to that
-  // braces rather than a state anybody should reach.
-  if (ms <= 0) return count;
-
-  const minutes = Math.floor(ms / 60_000);
-  const hours = Math.floor(minutes / 60);
-
-  // Past a day out the exact time is noise — "locks in 4d" is not a reason to
-  // act now, and it is the same sentence four days running.
-  if (hours >= 24) return count;
-  if (hours >= 1) return `Locks in ${hours}h`;
-  if (minutes >= 1) return `Locks in ${minutes}m`;
-  return "Locks any minute";
+export function PicksDue() {
+  return <Badge tone="danger">Picks Not Submitted</Badge>;
 }

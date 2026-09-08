@@ -5,7 +5,8 @@ import { createClient } from "@/lib/supabase/server";
 import { loadLeague, parseWeek, resolveCurrentWeek, weekRange } from "@/lib/league";
 import { isLocked, loadMembers, loadWeekBoard, weekIsSettled } from "@/lib/board";
 import { ordinal } from "@/lib/format";
-import { WeekPicker } from "../WeekPicker";
+import { SEASON, WeekPicker } from "../WeekPicker";
+import { SeasonStandings } from "./SeasonStandings";
 
 export const dynamic = "force-dynamic";
 
@@ -20,7 +21,28 @@ export default async function ResultsPage({
   const { week: weekParam } = await searchParams;
 
   const { league, userId } = await loadLeague(slug);
+
+  // "Season to date" is a mode rather than another week, so it rides the same
+  // query parameter the weeks use: one control, one piece of state, and a
+  // shareable URL for either.
+  const seasonView = weekParam === SEASON;
   const week = parseWeek(league, weekParam, await resolveCurrentWeek(league.season));
+
+  const picker = (
+    <Suspense fallback={null}>
+      <WeekPicker
+        weeks={weekRange(league)}
+        current={week}
+        regularSeasonEndWeek={league.regular_season_end_week}
+        includeSeason
+        seasonSelected={seasonView}
+      />
+    </Suspense>
+  );
+
+  if (seasonView) {
+    return <SeasonStandings league={league} userId={userId} picker={picker} />;
+  }
 
   const supabase = await createClient();
   const [members, board, { data: picks }, { data: results }] = await Promise.all([
@@ -77,13 +99,7 @@ export default async function ResultsPage({
         }}
       >
         <h2 style={{ fontSize: "1.1rem", margin: 0 }}>Week {week} results</h2>
-        <Suspense fallback={null}>
-          <WeekPicker
-            weeks={weekRange(league)}
-            current={week}
-            regularSeasonEndWeek={league.regular_season_end_week}
-          />
-        </Suspense>
+        {picker}
       </div>
 
       {winners.length > 0 ? (
