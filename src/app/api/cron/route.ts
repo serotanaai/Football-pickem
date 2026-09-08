@@ -46,19 +46,27 @@ export async function GET(request: Request) {
       await syncConferences(db);
       teams = await syncTeams(db, season);
     }
+    // Polls first, then the scoreboard, then the boards.
+    //
+    // The order is the point. A board opens when the poll is in and is cut from
+    // the ranks on the games rows, and those two come from different ESPN
+    // endpoints — so fetching the scoreboard first means the run that first
+    // sees a new poll can still be holding last week's ranks when it builds the
+    // slate. Asking for the poll first does not make the scoreboard fresher,
+    // but it puts the request that matters at the front rather than behind
+    // whatever the previous fetch happened to return.
+    //
+    // This also runs on the ordinary schedule now rather than only under
+    // ?rankings=1, and covers the week after the last one in play — that is the
+    // poll the next board is waiting on.
+    const rankingWeeks = [...new Set([...weeks, Math.max(...weeks) + 1])];
+    const rankings = [];
+    for (const week of rankingWeeks) rankings.push(await syncRankings(db, season, week));
+
     const results: Record<string, unknown> = {};
     for (const week of weeks) {
       results[`week_${week}`] = await syncWeek(db, season, week);
     }
-
-    // The poll is now an input to the boards rather than a decoration on them:
-    // a week is not built until its AP Top 25 is in, so this has to run on the
-    // ordinary schedule and not only when somebody remembers ?rankings=1. It is
-    // one request per week, and the week after the last one in play as well —
-    // that is the poll the next board is waiting on.
-    const rankingWeeks = [...new Set([...weeks, Math.max(...weeks) + 1])];
-    const rankings = [];
-    for (const week of rankingWeeks) rankings.push(await syncRankings(db, season, week));
 
     // Written down rather than only returned. The boards wait on this fetch, so
     // "is the poll in, and if not is that AP or us" has to be answerable on a
