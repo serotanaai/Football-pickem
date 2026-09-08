@@ -210,3 +210,57 @@ export async function loadWeekConsensus(
 
   return out;
 }
+
+/** A board the member can still act on, and how much of it is unfilled. */
+export type OpenBoard = {
+  week: number;
+  /** Games on the board with no pick against them. */
+  remaining: number;
+  lockAt: string | null;
+};
+
+/**
+ * Per league, the board that is still open and still short of picks.
+ *
+ * "Open" is the earliest week whose lock has not passed, not the highest week
+ * number: a board is generated some time before it locks, so a league can have
+ * next week's slate sitting behind this week's, and the one a member can still
+ * do something about is the nearer of the two.
+ *
+ * A league is absent from the result when there is nothing to nag about —
+ * board full, board locked, or no board at all. That absence is the whole
+ * point: the caller shows a marker for what comes back and nothing otherwise,
+ * so a member who is on top of every league sees a dashboard with no noise on
+ * it at all.
+ */
+export function openBoards(
+  weeks: Pick<Tables<"league_weeks">, "league_id" | "week" | "game_count" | "lock_at">[],
+  submissions: Pick<Tables<"pick_submissions">, "league_id" | "week" | "pick_count">[],
+  now = Date.now(),
+): Map<string, OpenBoard> {
+  const picked = new Map(
+    submissions.map((s) => [`${s.league_id}:${s.week}`, s.pick_count]),
+  );
+
+  const earliest = new Map<string, Pick<Tables<"league_weeks">, "league_id" | "week" | "game_count" | "lock_at">>();
+  for (const week of weeks) {
+    // A board with no lock time has no games on it yet, so there is nothing to
+    // pick and no deadline to be late for.
+    if (!week.lock_at) continue;
+    if (new Date(week.lock_at).getTime() <= now) continue;
+
+    const held = earliest.get(week.league_id);
+    if (!held || new Date(week.lock_at).getTime() < new Date(held.lock_at!).getTime()) {
+      earliest.set(week.league_id, week);
+    }
+  }
+
+  const out = new Map<string, OpenBoard>();
+  for (const [leagueId, week] of earliest) {
+    const remaining = week.game_count - (picked.get(`${leagueId}:${week.week}`) ?? 0);
+    if (remaining > 0) {
+      out.set(leagueId, { week: week.week, remaining, lockAt: week.lock_at });
+    }
+  }
+  return out;
+}

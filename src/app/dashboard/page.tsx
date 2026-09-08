@@ -10,6 +10,8 @@ import {
   requireUser,
 } from "@/lib/league";
 import { ordinal, scopeBadge } from "@/lib/format";
+import { openBoards } from "@/lib/board";
+import { PicksDue } from "@/components/PicksDue";
 import { DEFAULT_SEASON } from "@/lib/env";
 
 export const dynamic = "force-dynamic";
@@ -25,22 +27,45 @@ export default async function DashboardPage() {
 
   const leagueIds = (memberships ?? []).map((m) => m.league_id);
 
-  const [{ data: leagues }, { data: conferences }, { data: standings }, { data: counts }] =
-    await Promise.all([
-      leagueIds.length
-        ? supabase.from("leagues").select("*").in("id", leagueIds)
-        : Promise.resolve({ data: [] as never[] }),
-      supabase.from("conferences").select("id, short_name, name"),
-      leagueIds.length
-        ? supabase
-            .from("league_standings")
-            .select("league_id, user_id, points, correct, incorrect")
-            .in("league_id", leagueIds)
-        : Promise.resolve({ data: [] as never[] }),
-      leagueIds.length
-        ? supabase.from("league_members").select("league_id, user_id").in("league_id", leagueIds)
-        : Promise.resolve({ data: [] as never[] }),
-    ]);
+  const [
+    { data: leagues },
+    { data: conferences },
+    { data: standings },
+    { data: counts },
+    { data: weeks },
+    { data: submissions },
+  ] = await Promise.all([
+    leagueIds.length
+      ? supabase.from("leagues").select("*").in("id", leagueIds)
+      : Promise.resolve({ data: [] as never[] }),
+    supabase.from("conferences").select("id, short_name, name"),
+    leagueIds.length
+      ? supabase
+          .from("league_standings")
+          .select("league_id, user_id, points, correct, incorrect")
+          .in("league_id", leagueIds)
+      : Promise.resolve({ data: [] as never[] }),
+    leagueIds.length
+      ? supabase.from("league_members").select("league_id, user_id").in("league_id", leagueIds)
+      : Promise.resolve({ data: [] as never[] }),
+    // Boards that have not locked yet, and this member's own progress against
+    // them. Both are read through RLS as the member, so neither can say
+    // anything about a league they are not in.
+    leagueIds.length
+      ? supabase
+          .from("league_weeks")
+          .select("league_id, week, game_count, lock_at")
+          .in("league_id", leagueIds)
+          .gt("lock_at", new Date().toISOString())
+      : Promise.resolve({ data: [] as never[] }),
+    leagueIds.length
+      ? supabase
+          .from("pick_submissions")
+          .select("league_id, week, pick_count")
+          .in("league_id", leagueIds)
+          .eq("user_id", user.id)
+      : Promise.resolve({ data: [] as never[] }),
+  ]);
 
   const conferenceById = new Map((conferences ?? []).map((c) => [c.id, c]));
   const roleByLeague = new Map((memberships ?? []).map((m) => [m.league_id, m.role]));
@@ -64,6 +89,11 @@ export default async function DashboardPage() {
       myStanding.set(leagueId, { points: rows[index].points, place: index + 1 });
     }
   }
+
+  // One clock for the whole page, so two cards locking at the same moment can
+  // never disagree about how long is left.
+  const now = Date.now();
+  const due = openBoards(weeks ?? [], submissions ?? [], now);
 
   const sorted = [...(leagues ?? [])].sort((a, b) => a.name.localeCompare(b.name));
 
@@ -123,6 +153,7 @@ export default async function DashboardPage() {
               ? conferenceById.get(league.conference_id)
               : null;
             const standing = myStanding.get(league.id);
+            const owed = due.get(league.id);
 
             return (
               <Reveal key={league.id} delay={index * 60}>
@@ -131,19 +162,40 @@ export default async function DashboardPage() {
                   className="surface surface-hover"
                   style={{ padding: "1.05rem 1.15rem", textDecoration: "none", display: "block" }}
                 >
+                  {/* Two columns, not one wrapping row. The status belongs at
+                      the top right corner of the card and has to stay there:
+                      left in the run of tags with an auto margin it dropped to
+                      a line of its own as soon as the name and tags filled the
+                      row, which was most cards, and a badge sitting alone under
+                      the title reads as a mistake rather than a warning. */}
                   <div
                     style={{
                       display: "flex",
-                      alignItems: "center",
+                      alignItems: "flex-start",
+                      justifyContent: "space-between",
                       gap: "0.5rem",
                       marginBottom: "0.5rem",
-                      flexWrap: "wrap",
                     }}
                   >
-                    <strong style={{ fontSize: "1rem" }}>{league.name}</strong>
-                    <Badge tone="accent">{scopeBadge(league.scope, conference?.short_name)}</Badge>
-                    {roleByLeague.get(league.id) === "commissioner" ? (
-                      <Badge tone="muted">Commissioner</Badge>
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "0.5rem",
+                        flexWrap: "wrap",
+                        minWidth: 0,
+                      }}
+                    >
+                      <strong style={{ fontSize: "1rem" }}>{league.name}</strong>
+                      <Badge tone="accent">{scopeBadge(league.scope, conference?.short_name)}</Badge>
+                      {roleByLeague.get(league.id) === "commissioner" ? (
+                        <Badge tone="muted">Commissioner</Badge>
+                      ) : null}
+                    </div>
+                    {owed ? (
+                      <span style={{ flex: "none" }}>
+                        <PicksDue lockAt={owed.lockAt} remaining={owed.remaining} now={now} />
+                      </span>
                     ) : null}
                   </div>
 
