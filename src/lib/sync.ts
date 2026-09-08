@@ -74,19 +74,46 @@ export async function syncWeek(db: Supabase, season: number, week: number) {
  * themselves, so pulling the poll on every scores run was a second request an
  * hour that bought nothing between Sunday afternoons.
  */
-export async function syncRankings(db: Supabase, season: number, week: number) {
+export type RankingSync = {
+  week: number;
+  stored: number;
+  /** Null when the call worked, whether or not it found a poll. */
+  error: string | null;
+};
+
+/**
+ * Stores a week's polls.
+ *
+ * This used to swallow every error and answer 0, on the reasoning that polls
+ * are not published every week. The two cases are not the same, and collapsing
+ * them hid the second: the rankings table was empty for the whole of this
+ * season and nothing anywhere said so. "No poll yet" is a fact about the week;
+ * a fetch that throws is a fact about us, and only one of them is fine.
+ *
+ * It still does not throw — one bad week must not take down a cron run that
+ * also grades picks and builds boards — but the reason now travels back with
+ * the count and out through the response.
+ */
+export async function syncRankings(
+  db: Supabase,
+  season: number,
+  week: number,
+): Promise<RankingSync> {
   try {
     const rankings = await fetchRankings(season, week);
-    if (rankings.length === 0) return 0;
+    if (rankings.length === 0) return { week, stored: 0, error: null };
 
     const { error } = await db.from("rankings").upsert(
       rankings.map((r) => ({ ...r, updated_at: new Date().toISOString() })),
     );
     if (error) throw new Error(error.message);
-    return rankings.length;
-  } catch {
-    // Polls are not published every week, and not at all before week 3.
-    return 0;
+    return { week, stored: rankings.length, error: null };
+  } catch (cause) {
+    return {
+      week,
+      stored: 0,
+      error: cause instanceof Error ? cause.message : "rankings fetch failed",
+    };
   }
 }
 

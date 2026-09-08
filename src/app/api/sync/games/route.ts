@@ -32,7 +32,7 @@ export async function POST(request: Request) {
     let rankings: number | null = null;
     if (withRankings) {
       rankings = 0;
-      for (const week of weeks) rankings += await syncRankings(db, season, week);
+      for (const week of weeks) rankings += (await syncRankings(db, season, week)).stored;
     }
 
     const leagues = await refreshLeagues(db, season, weeks);

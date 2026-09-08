@@ -531,6 +531,14 @@ export interface Database {
         }[];
       };
       unsubscribe_by_token: { Args: { p_token: string }; Returns: boolean };
+      ap_poll_published: {
+        Args: { p_season: number; p_week: number };
+        Returns: boolean;
+      };
+      week_board_open: {
+        Args: { p_season: number; p_week: number };
+        Returns: boolean;
+      };
     };
     Enums: {
       league_scope: LeagueScope;

@@ -46,19 +46,19 @@ export async function GET(request: Request) {
       await syncConferences(db);
       teams = await syncTeams(db, season);
     }
-    const url = new URL(request.url);
-    const withRankings = url.searchParams.get("rankings") === "1";
-
     const results: Record<string, unknown> = {};
     for (const week of weeks) {
       results[`week_${week}`] = await syncWeek(db, season, week);
     }
 
-    let rankings: number | null = null;
-    if (withRankings) {
-      rankings = 0;
-      for (const week of weeks) rankings += await syncRankings(db, season, week);
-    }
+    // The poll is now an input to the boards rather than a decoration on them:
+    // a week is not built until its AP Top 25 is in, so this has to run on the
+    // ordinary schedule and not only when somebody remembers ?rankings=1. It is
+    // one request per week, and the week after the last one in play as well —
+    // that is the poll the next board is waiting on.
+    const rankingWeeks = [...new Set([...weeks, Math.max(...weeks) + 1])];
+    const rankings = [];
+    for (const week of rankingWeeks) rankings.push(await syncRankings(db, season, week));
 
     const leagues = await refreshLeagues(db, season, weeks);
     return NextResponse.json({

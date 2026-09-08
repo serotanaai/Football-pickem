@@ -28,6 +28,15 @@ export default async function PicksPage({
   const submission = await loadSubmission(league.id, userId, week);
 
   const supabase = await createClient();
+
+  // Only asked when there is nothing to show, so the answer only ever decides
+  // which empty state to render. Defaults to open if the call fails: a page
+  // that says "come back Sunday" because a query errored is worse than one
+  // that says the slate is empty.
+  const boardOpen =
+    games.length > 0 ||
+    ((await supabase.rpc("week_board_open", { p_season: league.season, p_week: week })).data ??
+      true);
   const { data: myPicks } = await supabase
     .from("picks")
     .select("game_id, team_id")
@@ -125,7 +134,22 @@ export default async function PicksPage({
         </div>
       ) : null}
 
-      {boardGames.length === 0 ? (
+      {boardGames.length === 0 && !boardOpen ? (
+        /* Held rather than missing. The board is not built until the AP Top 25
+           for the week is in, so that a top25 slate is cut from this week's
+           poll and the 2.5x game is chosen against it — both are frozen once
+           the board exists, and frozen against last week's poll is worse than
+           waiting a day for the right one. */
+        <div className="surface" style={{ padding: "2.25rem 1.5rem", textAlign: "center" }}>
+          <p style={{ margin: "0 0 0.4rem", fontWeight: 600 }}>
+            Week {week} opens when the AP Top 25 lands.
+          </p>
+          <p className="muted" style={{ margin: 0, fontSize: "0.9rem" }}>
+            The poll comes out on Sunday. The slate is cut from it, so it is worth the wait —
+            check back then and the board will be here.
+          </p>
+        </div>
+      ) : boardGames.length === 0 ? (
         <div className="surface" style={{ padding: "2.25rem 1.5rem", textAlign: "center" }}>
           <p style={{ margin: "0 0 0.4rem", fontWeight: 600 }}>No games on this week&apos;s slate yet.</p>
           <p className="muted" style={{ margin: 0, fontSize: "0.9rem" }}>
