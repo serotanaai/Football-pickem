@@ -30,6 +30,7 @@ const PUBLIC_PATHS = [
   "/auth",
   "/join",
   "/reset-password",
+  "/legal",
   "/unsubscribe",
   "/api/unsubscribe",
   "/api/picks-count",

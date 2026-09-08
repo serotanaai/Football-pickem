@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { PasswordRequirements } from "@/components/PasswordRequirements";
 import { NAME_MAX, nameProblem, normalizeUsername, passwordIsValid } from "@/lib/password";
+import { LEGAL_VERSION, PRIVACY_HREF, TERMS_HREF } from "@/lib/legal";
 
 type Mode = "signup" | "password" | "magic";
 
@@ -36,6 +37,8 @@ export function LoginForm({
   );
   const [notice, setNotice] = useState<string | null>(null);
   const [nameIssue, setNameIssue] = useState<string | null>(null);
+  const [agreedTerms, setAgreedTerms] = useState(false);
+  const [agreedPrivacy, setAgreedPrivacy] = useState(false);
 
   // What the typed name will actually become, shown while it is being typed.
   const handle = normalizeUsername(name);
@@ -71,6 +74,10 @@ export function LoginForm({
     setError(null);
     setNotice(null);
     setConfirm("");
+    // Consent is given for a signup, not left ticked on a form that has since
+    // become a sign-in.
+    setAgreedTerms(false);
+    setAgreedPrivacy(false);
   }
 
   async function submit(event: React.FormEvent) {
@@ -85,9 +92,21 @@ export function LoginForm({
       if (mode === "magic") {
         const { error } = await supabase.auth.signInWithOtp({
           email,
-          options: { emailRedirectTo: callbackTo(next) },
+          // Sign-in only. Left to its default this creates an account for an
+          // address it has never seen, which would be a way onto the site that
+          // never passes the agreements below.
+          options: { emailRedirectTo: callbackTo(next), shouldCreateUser: false },
         });
-        if (error) throw error;
+        if (error) {
+          if (/signups not allowed|user not found/i.test(error.message)) {
+            setError({
+              message: "No account uses that email yet.",
+              links: [{ href: "#signup", label: "Create an account" }],
+            });
+            return;
+          }
+          throw error;
+        }
         setNotice(`Sign-in link sent to ${email}. Check your inbox.`);
         return;
       }
@@ -120,6 +139,12 @@ export function LoginForm({
       }
 
       // --- signing up ---
+      // The inputs are marked required, so the browser stops an empty box
+      // before this runs. This is here for the case where it did not.
+      if (!agreedTerms || !agreedPrivacy) {
+        setError({ message: "Please accept both agreements to create an account." });
+        return;
+      }
       const badName = nameProblem(name);
       if (badName) {
         setError({ message: badName });
@@ -156,7 +181,10 @@ export function LoginForm({
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
-        options: { emailRedirectTo: callbackTo(signupNext), data: { display_name: handle } },
+        options: {
+          emailRedirectTo: callbackTo(signupNext),
+          data: { display_name: handle, terms_version: LEGAL_VERSION },
+        },
       });
 
       if (error) {
@@ -350,7 +378,31 @@ export function LoginForm({
           <p style={{ color: "var(--accent)", fontSize: "0.85rem", margin: 0 }}>{notice}</p>
         ) : null}
 
-        <button className="btn btn-primary" type="submit" disabled={pending}>
+        {mode === "signup" ? (
+          <div style={{ display: "grid", gap: "0.6rem" }}>
+            <Agreement
+              id="agree-terms"
+              checked={agreedTerms}
+              onChange={setAgreedTerms}
+              href={TERMS_HREF}
+              linkLabel="Terms of Service"
+            />
+            <Agreement
+              id="agree-privacy"
+              checked={agreedPrivacy}
+              onChange={setAgreedPrivacy}
+              href={PRIVACY_HREF}
+              linkLabel="Privacy & Data Policy"
+              trailing="including how we use your email address"
+            />
+          </div>
+        ) : null}
+
+        <button
+          className="btn btn-primary"
+          type="submit"
+          disabled={pending || (mode === "signup" && !(agreedTerms && agreedPrivacy))}
+        >
           {pending
             ? "Working…"
             : mode === "signup"
@@ -369,5 +421,65 @@ export function LoginForm({
         ) : null}
       </form>
     </div>
+  );
+}
+
+/**
+ * One agreement, as a tick box with the document behind it.
+ *
+ * The link opens in a new tab on purpose: sending somebody away mid-signup
+ * loses the half-filled form, and a reader who cannot check what they are
+ * agreeing to without starting over will just tick it.
+ */
+function Agreement({
+  id,
+  checked,
+  onChange,
+  href,
+  linkLabel,
+  trailing,
+}: {
+  id: string;
+  checked: boolean;
+  onChange: (value: boolean) => void;
+  href: string;
+  linkLabel: string;
+  trailing?: string;
+}) {
+  return (
+    <label
+      htmlFor={id}
+      style={{
+        display: "grid",
+        gridTemplateColumns: "auto 1fr",
+        gap: "0.6rem",
+        alignItems: "start",
+        fontSize: "0.85rem",
+        lineHeight: 1.5,
+        cursor: "pointer",
+        fontWeight: 400,
+      }}
+    >
+      <input
+        id={id}
+        type="checkbox"
+        required
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+        style={{ width: "1rem", height: "1rem", marginTop: "0.15rem", cursor: "pointer" }}
+      />
+      <span>
+        I agree to the{" "}
+        <Link
+          href={href}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ color: "var(--accent)", textDecoration: "underline" }}
+        >
+          {linkLabel}
+        </Link>
+        {trailing ? `, ${trailing}` : ""}.
+      </span>
+    </label>
   );
 }

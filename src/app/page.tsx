@@ -178,6 +178,26 @@ export default async function HomePage() {
             </Reveal>
           ))}
         </div>
+
+        <footer
+          className="note"
+          style={{
+            marginTop: "3.5rem",
+            paddingTop: "1.25rem",
+            borderTop: "1px solid var(--line, #e3e3df)",
+            display: "flex",
+            flexWrap: "wrap",
+            gap: "1rem",
+            justifyContent: "space-between",
+          }}
+        >
+          <span>© {new Date().getFullYear()} PickemWeekly</span>
+          <span style={{ display: "flex", gap: "1rem" }}>
+            <Link href="/legal#terms">Terms</Link>
+            <Link href="/legal#privacy">Privacy</Link>
+            <Link href="/legal#email">Email &amp; unsubscribe</Link>
+          </span>
+        </footer>
       </div>
     </>
   );

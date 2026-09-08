@@ -158,6 +158,8 @@ export interface Database {
           created_at: string;
           email_opt_out: boolean;
           unsubscribe_token: string;
+          terms_accepted_at: string | null;
+          terms_version: string | null;
         };
         Insert: {
           id: string;
@@ -167,6 +169,8 @@ export interface Database {
           created_at?: string;
           email_opt_out?: boolean;
           unsubscribe_token?: string;
+          terms_accepted_at?: string | null;
+          terms_version?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["profiles"]["Insert"]>;
         Relationships: [];
