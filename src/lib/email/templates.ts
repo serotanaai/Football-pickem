@@ -11,6 +11,8 @@
  * a layout that survives both is one that stopped trying to be a web page.
  */
 
+import { FEATURED_MULTIPLIER } from "@/lib/format";
+
 export type Recipient = { name: string; email: string };
 
 /** One line of the week's table. */
@@ -169,7 +171,7 @@ export function resultsEmail(to: Recipient, d: ResultsData, leagueUrl: string, u
 }
 
 /**
- * The 2.5x game, drawn rather than described.
+ * The multiplier game, drawn rather than described.
  *
  * Crests, ranks, where it is played and when. The logos are remote images and
  * most clients block those until the reader says otherwise, so each school is
@@ -218,7 +220,7 @@ export function previewEmail(to: Recipient, d: PreviewData, leagueUrl: string, u
   const body =
     `<p style="margin:0 0 4px;font-size:19px;font-weight:700;">Week ${d.week}&rsquo;s matchup of the week</p>` +
     card +
-    `<p style="margin:0;">It is worth <b>2.5&times; Points</b> in ${esc(d.leagueName)}, so it is the one to get right.</p>`;
+    `<p style="margin:0;">It is worth <b>${FEATURED_MULTIPLIER}&times; Points</b> in ${esc(d.leagueName)}, so it is the one to get right.</p>`;
 
   const text =
     `Week ${d.week}'s matchup of the week\n\n` +
@@ -226,15 +228,11 @@ export function previewEmail(to: Recipient, d: PreviewData, leagueUrl: string, u
       ? `${game}\n${d.kickoff}${m?.broadcast ? ` - ${m.broadcast}` : ""}\n` +
         `${[m?.venue, m?.neutralSite ? "neutral site" : null].filter(Boolean).join(" - ")}\n\n`
       : `The week ${d.week} board is up.\n\n`) +
-    `It is worth 2.5x Points in ${d.leagueName}, so it is the one to get right.\n\n` +
+    `It is worth ${FEATURED_MULTIPLIER}x Points in ${d.leagueName}, so it is the one to get right.\n\n` +
     `Make your picks: ${leagueUrl}\n\nUnsubscribe: ${unsub}`;
 
   return {
-    // The league leads, because for anyone in more than one it is the only
-    // thing telling two of these apart — and the 2.5x game is very often the
-    // same game in all of them. Four identical subject lines arriving together
-    // is what a mail client threads and a reader reports.
-    subject: game ? `${d.leagueName}: ${game}` : `Week ${d.week} is up — ${d.leagueName}`,
+    subject: game ? `Matchup of the week: ${game}` : `Week ${d.week} is up — ${d.leagueName}`,
     html: layout(body, { href: leagueUrl, label: "Make your picks" }, unsub),
     text,
   };
