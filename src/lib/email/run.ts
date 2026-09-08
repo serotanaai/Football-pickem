@@ -218,115 +218,153 @@ export async function runEmailSequence(options: RunOptions = {}): Promise<RunSum
     }
   }
 
+  // One message per person per kind per week, however many leagues that is.
+  //
+  // due_emails answers per league-member, because that is what the ledger is
+  // keyed on and what "already sent" has to mean. But a reader is not a league
+  // membership: five leagues used to mean five near-identical emails inside one
+  // second. So the rows are grouped here, at the last possible moment, leaving
+  // the ledger — and therefore every already-sent guarantee — exactly as it was.
+  const groups = new Map<string, typeof due>();
   for (const row of due) {
-    const token = tokenOf.get(row.user_id);
+    const k = `${row.user_id}:${row.kind}:${row.week}`;
+    const bucket = groups.get(k);
+    if (bucket) bucket.push(row);
+    else groups.set(k, [row]);
+  }
+
+  for (const rows of groups.values()) {
+    const head = rows[0];
+    const token = tokenOf.get(head.user_id);
     if (!token) {
-      summary.errors.push(`no unsubscribe token for ${row.user_id}`);
+      summary.errors.push(`no unsubscribe token for ${head.user_id}`);
       continue;
     }
 
     const unsub = `${base}/unsubscribe/${token}`;
     const oneClick = `${base}/api/unsubscribe/${token}`;
-    const leagueUrl = `${base}/leagues/${row.league_slug}`;
-    const picksUrl = `${leagueUrl}/picks`;
-    const to = { name: row.display_name, email: row.email };
-    const board = boardOf.get(key(row.league_id, row.week));
+    const dashboard = `${base}/dashboard`;
+    const to = { name: head.display_name, email: head.email };
 
-    let built: { subject: string; html: string; text: string } | null = null;
+    // A league whose board the reader has since picked drops out of a reminder,
+    // and if that empties the group there is nothing left to send.
+    const covered =
+      head.kind === "results" || head.kind === "preview"
+        ? rows
+        : rows.filter((r) => !pickedOf.has(`${r.league_id}:${r.week}:${r.user_id}`));
 
-    if (row.kind === "results") {
-      const mine = scoreOf.get(`${row.league_id}:${row.week}:${row.user_id}`);
-      const table = tableOf.get(key(row.league_id, row.week)) ?? [];
-      const standings = table.map((r, index) => ({
-        position: r.rank ?? index + 1,
-        name: r.name,
-        points: r.points,
-        correct: r.correct,
-        incorrect: r.incorrect,
-        isYou: r.user_id === row.user_id,
-      }));
+    if (covered.length === 0) {
+      summary.skipped += rows.length;
+      continue;
+    }
+
+    // Same order everywhere: the board that locks first is the one that matters
+    // first, and a stable order keeps two runs from disagreeing about layout.
+    covered.sort((a, b) =>
+      (a.lock_at ?? "").localeCompare(b.lock_at ?? "") ||
+      a.league_name.localeCompare(b.league_name),
+    );
+
+    let built: { subject: string; html: string; text: string };
+
+    if (head.kind === "results") {
       built = resultsEmail(
         to,
-        {
-          leagueName: row.league_name,
-          week: row.week,
-          position: standings.find((r) => r.isYou)?.position ?? null,
-          wonWeek: mine?.week_won === true,
-          standings,
-        },
-        leagueUrl,
+        covered.map((row) => {
+          const mine = scoreOf.get(`${row.league_id}:${row.week}:${row.user_id}`);
+          const table = tableOf.get(key(row.league_id, row.week)) ?? [];
+          const standings = table.map((r, index) => ({
+            position: r.rank ?? index + 1,
+            name: r.name,
+            points: r.points,
+            correct: r.correct,
+            incorrect: r.incorrect,
+            isYou: r.user_id === row.user_id,
+          }));
+          return {
+            leagueName: row.league_name,
+            url: `${base}/leagues/${row.league_slug}`,
+            week: row.week,
+            position: standings.find((r) => r.isYou)?.position ?? null,
+            wonWeek: mine?.week_won === true,
+            standings,
+          };
+        }),
+        dashboard,
         unsub,
       );
-    } else if (row.kind === "preview") {
-      const featured = board?.featured_game_id ? gameOf.get(board.featured_game_id) : undefined;
+    } else if (head.kind === "preview") {
       built = previewEmail(
         to,
-        {
-          leagueName: row.league_name,
-          week: row.week,
-          matchup: featured
-            ? {
-                away: featured.away,
-                awayRank: featured.awayRank,
-                awayLogo: featured.awayLogo,
-                home: featured.home,
-                homeRank: featured.homeRank,
-                homeLogo: featured.homeLogo,
-                venue: featured.venue,
-                neutralSite: featured.neutralSite,
-                broadcast: featured.broadcast,
-              }
-            : null,
-          kickoff: whenText(featured?.start ?? row.lock_at),
-        },
-        picksUrl,
+        covered.map((row) => {
+          const board = boardOf.get(key(row.league_id, row.week));
+          const featured = board?.featured_game_id ? gameOf.get(board.featured_game_id) : undefined;
+          return {
+            leagueName: row.league_name,
+            url: `${base}/leagues/${row.league_slug}/picks`,
+            week: row.week,
+            matchup: featured
+              ? {
+                  away: featured.away,
+                  awayRank: featured.awayRank,
+                  awayLogo: featured.awayLogo,
+                  home: featured.home,
+                  homeRank: featured.homeRank,
+                  homeLogo: featured.homeLogo,
+                  venue: featured.venue,
+                  neutralSite: featured.neutralSite,
+                  broadcast: featured.broadcast,
+                }
+              : null,
+            kickoff: whenText(featured?.start ?? row.lock_at),
+          };
+        }),
+        dashboard,
         unsub,
       );
     } else {
-      // Submitted between due_emails running and this loop reaching them.
-      // Presence of the row is the whole test — see openBoards.
-      if (pickedOf.has(`${row.league_id}:${row.week}:${row.user_id}`)) {
-        summary.skipped += 1;
-        continue;
-      }
       built = reminderEmail(
         to,
-        {
+        covered.map((row) => ({
           leagueName: row.league_name,
+          url: `${base}/leagues/${row.league_slug}/picks`,
           week: row.week,
           lockAt: whenText(row.lock_at),
           lastCall: row.kind === "last_call",
-        },
-        picksUrl,
+        })),
+        dashboard,
         unsub,
       );
     }
 
-    summary.byKind[row.kind] = (summary.byKind[row.kind] ?? 0) + 1;
-    summary.planned.push({ kind: row.kind, to: row.email, subject: built.subject });
+    summary.byKind[head.kind] = (summary.byKind[head.kind] ?? 0) + covered.length;
+    summary.planned.push({ kind: head.kind, to: head.email, subject: built.subject });
 
     if (!live) continue;
 
-    // Claim first. A unique violation here means another run already owns this
-    // message, which is exactly the collision the constraint is there to catch.
+    // Claim every league this message covers, in one statement. A unique
+    // violation on any of them means another run already owns part of the
+    // group, so none of it is claimed and none of it is sent — the next run
+    // sees whatever is genuinely left and sends that instead.
     const claim = await db
       .from("email_log")
-      .insert({
-        user_id: row.user_id,
-        league_id: row.league_id,
-        week: row.week,
-        kind: row.kind,
-      })
-      .select("id")
-      .single();
+      .insert(
+        covered.map((row) => ({
+          user_id: row.user_id,
+          league_id: row.league_id,
+          week: row.week,
+          kind: row.kind,
+        })),
+      )
+      .select("id");
 
-    if (claim.error || !claim.data) {
-      summary.skipped += 1;
+    if (claim.error || !claim.data || claim.data.length === 0) {
+      summary.skipped += covered.length;
       continue;
     }
 
     const result = await sendEmail({
-      to: row.email,
+      to: head.email,
       subject: built.subject,
       html: built.html,
       text: built.text,
@@ -334,15 +372,17 @@ export async function runEmailSequence(options: RunOptions = {}): Promise<RunSum
       oneClickUrl: oneClick,
     });
 
+    const ids = claim.data.map((r) => r.id);
+
     if (result.ok) {
       summary.sent += 1;
-      await db.from("email_log").update({ provider_id: result.id }).eq("id", claim.data.id);
+      await db.from("email_log").update({ provider_id: result.id }).in("id", ids);
     } else {
-      // Hand the claim back, so the next run can try again rather than the
-      // ledger recording a message nobody received.
+      // Hand the whole claim back, so the next run can try again rather than
+      // the ledger recording a message nobody received.
       summary.failed += 1;
-      summary.errors.push(`${row.email} (${row.kind}): ${result.error}`);
-      await db.from("email_log").delete().eq("id", claim.data.id);
+      summary.errors.push(`${head.email} (${head.kind}): ${result.error}`);
+      await db.from("email_log").delete().in("id", ids);
     }
 
     await new Promise((resolve) => setTimeout(resolve, GAP_MS));
