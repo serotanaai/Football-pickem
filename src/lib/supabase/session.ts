@@ -14,7 +14,27 @@ const PUBLIC_FILES = [
   "/manifest.webmanifest",
 ];
 
-const PUBLIC_PATHS = ["/", "/login", "/auth", "/join", "/reset-password"];
+// The endpoints the landing page calls while nobody is signed in, plus the two
+// unsubscribe entry points.
+//
+// These were being redirected to /login, which for a fetch means the JSON parse
+// fails and the caller's catch swallows it: the picks counter had never once
+// refreshed from the server, and the live scores never polled, because the only
+// people who see that page are logged out. An unsubscribe link is worse still —
+// it is opened from an inbox by somebody who may never sign in again, and
+// asking them for a password in order to stop sending them email is how a spam
+// complaint gets filed instead.
+const PUBLIC_PATHS = [
+  "/",
+  "/login",
+  "/auth",
+  "/join",
+  "/reset-password",
+  "/unsubscribe",
+  "/api/unsubscribe",
+  "/api/picks-count",
+  "/api/ticker",
+];
 
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request });

@@ -4,6 +4,7 @@
 
 export type LeagueScope = "conference" | "all_fbs" | "top25";
 export type MemberRole = "commissioner" | "member";
+export type EmailKind = "results" | "preview" | "reminder" | "last_call";
 export type GameState =
   | "scheduled"
   | "in_progress"
@@ -155,6 +156,8 @@ export interface Database {
           display_name: string | null;
           avatar_url: string | null;
           created_at: string;
+          email_opt_out: boolean;
+          unsubscribe_token: string;
         };
         Insert: {
           id: string;
@@ -162,8 +165,32 @@ export interface Database {
           display_name?: string | null;
           avatar_url?: string | null;
           created_at?: string;
+          email_opt_out?: boolean;
+          unsubscribe_token?: string;
         };
         Update: Partial<Database["public"]["Tables"]["profiles"]["Insert"]>;
+        Relationships: [];
+      };
+      email_log: {
+        Row: {
+          id: string;
+          user_id: string;
+          league_id: string;
+          week: number;
+          kind: EmailKind;
+          sent_at: string;
+          provider_id: string | null;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          league_id: string;
+          week: number;
+          kind: EmailKind;
+          sent_at?: string;
+          provider_id?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["email_log"]["Insert"]>;
         Relationships: [];
       };
       leagues: {
@@ -489,11 +516,27 @@ export interface Database {
       is_league_member: { Args: { p_league_id: string }; Returns: boolean };
       is_league_commissioner: { Args: { p_league_id: string }; Returns: boolean };
       shares_league_with: { Args: { p_user: string }; Returns: boolean };
+      due_emails: {
+        Args: { p_now?: string; p_limit?: number };
+        Returns: {
+          kind: EmailKind;
+          user_id: string;
+          email: string;
+          display_name: string;
+          league_id: string;
+          league_name: string;
+          league_slug: string;
+          week: number;
+          lock_at: string | null;
+        }[];
+      };
+      unsubscribe_by_token: { Args: { p_token: string }; Returns: boolean };
     };
     Enums: {
       league_scope: LeagueScope;
       member_role: MemberRole;
       game_state: GameState;
+      email_kind: EmailKind;
     };
     CompositeTypes: Record<string, never>;
   };
