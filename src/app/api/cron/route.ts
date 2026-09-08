@@ -60,6 +60,16 @@ export async function GET(request: Request) {
     const rankings = [];
     for (const week of rankingWeeks) rankings.push(await syncRankings(db, season, week));
 
+    // Written down rather than only returned. The boards wait on this fetch, so
+    // "is the poll in, and if not is that AP or us" has to be answerable on a
+    // Sunday afternoon without re-running the job to find out.
+    await db.from("sync_health").upsert({
+      kind: "rankings",
+      ran_at: new Date().toISOString(),
+      ok: rankings.every((r) => r.error === null),
+      detail: { season, weeks: rankingWeeks, results: rankings },
+    });
+
     const leagues = await refreshLeagues(db, season, weeks);
     return NextResponse.json({
       ok: true,

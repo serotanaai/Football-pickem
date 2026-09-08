@@ -171,6 +171,22 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["profiles"]["Insert"]>;
         Relationships: [];
       };
+      sync_health: {
+        Row: {
+          kind: string;
+          ran_at: string;
+          ok: boolean;
+          detail: unknown;
+        };
+        Insert: {
+          kind: string;
+          ran_at?: string;
+          ok: boolean;
+          detail?: unknown;
+        };
+        Update: Partial<Database["public"]["Tables"]["sync_health"]["Insert"]>;
+        Relationships: [];
+      };
       email_log: {
         Row: {
           id: string;
