@@ -48,6 +48,12 @@ export type RunOptions = {
   live?: boolean;
   /** Send only to this address. The safe way to try the real thing once. */
   onlyTo?: string;
+  /**
+   * Send only this kind. Lets the sequence be turned on a piece at a time —
+   * previews this week, the rest once they have been watched land — without
+   * the schedule quietly deciding to send the other three on your behalf.
+   */
+  onlyKind?: EmailKind;
 };
 
 const ET = "America/New_York";
@@ -88,7 +94,11 @@ export async function runEmailSequence(options: RunOptions = {}): Promise<RunSum
     return summary;
   }
 
-  const due = (dueRows ?? []).filter((row) => !options.onlyTo || row.email === options.onlyTo);
+  const due = (dueRows ?? []).filter(
+    (row) =>
+      (!options.onlyTo || row.email === options.onlyTo) &&
+      (!options.onlyKind || row.kind === options.onlyKind),
+  );
   summary.due = due.length;
   if (due.length === 0) return summary;
 

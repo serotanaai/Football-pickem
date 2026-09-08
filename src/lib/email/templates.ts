@@ -230,7 +230,11 @@ export function previewEmail(to: Recipient, d: PreviewData, leagueUrl: string, u
     `Make your picks: ${leagueUrl}\n\nUnsubscribe: ${unsub}`;
 
   return {
-    subject: game ? `Matchup of the week: ${game}` : `Week ${d.week} is up — ${d.leagueName}`,
+    // The league leads, because for anyone in more than one it is the only
+    // thing telling two of these apart — and the 2.5x game is very often the
+    // same game in all of them. Four identical subject lines arriving together
+    // is what a mail client threads and a reader reports.
+    subject: game ? `${d.leagueName}: ${game}` : `Week ${d.week} is up — ${d.leagueName}`,
     html: layout(body, { href: leagueUrl, label: "Make your picks" }, unsub),
     text,
   };
