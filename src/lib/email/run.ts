@@ -22,6 +22,15 @@ const GAP_MS = 600;
 
 export type RunSummary = {
   live: boolean;
+  /**
+   * What the environment says, whatever this particular run decided.
+   *
+   * `live` is the decision, and a dry run forces it false — which makes it
+   * useless for the one question worth asking before going live: is the
+   * switch even on? Reading that off a dry run used to be impossible, so the
+   * only way to find out was to send.
+   */
+  emailLive: boolean;
   due: number;
   sent: number;
   /** Already in the ledger — another run got there first. */
@@ -63,6 +72,7 @@ export async function runEmailSequence(options: RunOptions = {}): Promise<RunSum
 
   const summary: RunSummary = {
     live,
+    emailLive: EMAIL_LIVE,
     due: 0,
     sent: 0,
     skipped: 0,
