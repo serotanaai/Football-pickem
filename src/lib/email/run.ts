@@ -218,16 +218,28 @@ export async function runEmailSequence(options: RunOptions = {}): Promise<RunSum
     }
   }
 
-  // One message per person per kind per week, however many leagues that is.
+  // One message per person per kind per week, however many leagues that is —
+  // except results, which stay one per league.
   //
   // due_emails answers per league-member, because that is what the ledger is
   // keyed on and what "already sent" has to mean. But a reader is not a league
   // membership: five leagues used to mean five near-identical emails inside one
   // second. So the rows are grouped here, at the last possible moment, leaving
   // the ledger — and therefore every already-sent guarantee — exactly as it was.
+  //
+  // Results are the exception on purpose. A preview repeats itself across
+  // leagues, because the 2.5x game is picked by rank and is often the same
+  // game; there is nothing to lose by folding those together. A result does
+  // not repeat — every league has its own table, its own winner and its own
+  // finish for the reader — and five of those stacked in one message buries
+  // the four below the fold. They are worth an inbox line each.
+  const GROUPED = new Set<EmailKind>(["preview", "reminder", "last_call"]);
+
   const groups = new Map<string, typeof due>();
   for (const row of due) {
-    const k = `${row.user_id}:${row.kind}:${row.week}`;
+    const k = GROUPED.has(row.kind)
+      ? `${row.user_id}:${row.kind}:${row.week}`
+      : `${row.user_id}:${row.kind}:${row.week}:${row.league_id}`;
     const bucket = groups.get(k);
     if (bucket) bucket.push(row);
     else groups.set(k, [row]);

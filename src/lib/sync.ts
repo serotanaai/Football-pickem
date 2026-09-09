@@ -79,6 +79,8 @@ export type RankingSync = {
   stored: number;
   /** Ranked teams the teams table has never heard of, if any. */
   skipped: number[];
+  /** Polls refused because they were last week's, republished under this week. */
+  stale: string[];
   /** Null when the call worked, whether or not it found a poll. */
   error: string | null;
 };
@@ -103,7 +105,7 @@ export async function syncRankings(
 ): Promise<RankingSync> {
   try {
     const rankings = await fetchRankings(season, week);
-    if (rankings.length === 0) return { week, stored: 0, skipped: [], error: null };
+    if (rankings.length === 0) return { week, stored: 0, skipped: [], stale: [], error: null };
 
     // Only teams we actually have.
     //
@@ -122,19 +124,61 @@ export async function syncRankings(
     const skipped = ids.filter((id) => !haveIds.has(id));
 
     if (usable.length === 0) {
-      return { week, stored: 0, skipped, error: "no ranked team is in the teams table" };
+      return { week, stored: 0, skipped, stale: [], error: "no ranked team is in the teams table" };
     }
 
+    // Refuse a poll that is last week's wearing this week's number.
+    //
+    // ESPN is asked for a specific week and answers with the newest poll it
+    // has, so asking ahead of publication returns the current one — and
+    // fetchRankings stamps the week we asked for onto whatever comes back. The
+    // cron asks one week ahead deliberately, to catch a new poll the hour it
+    // lands. The cost of that, unguarded, is that it manufactures next week's
+    // poll out of this week's, and week_board_open cannot tell the difference:
+    // the gate that exists to hold a board until the AP poll drops opens itself
+    // on a copy of the poll it already had.
+    //
+    // A published poll always moves somebody. Twenty-five identical placements
+    // are the same poll, not a new one. Compared per poll, because AP and the
+    // coaches' poll do not publish together.
+    const previous = await db
+      .from("rankings")
+      .select("poll, rank, team_id")
+      .eq("season", season)
+      .eq("week", week - 1);
+
+    const priorByPoll = new Map<string, Set<string>>();
+    for (const row of previous.data ?? []) {
+      const set = priorByPoll.get(row.poll) ?? new Set<string>();
+      set.add(`${row.rank}:${row.team_id}`);
+      priorByPoll.set(row.poll, set);
+    }
+
+    const stale: string[] = [];
+    const fresh = usable.filter((r) => {
+      const prior = priorByPoll.get(r.poll);
+      if (!prior || prior.size === 0) return true;
+      const current = usable.filter((u) => u.poll === r.poll);
+      const same =
+        current.length === prior.size &&
+        current.every((u) => prior.has(`${u.rank}:${u.team_id}`));
+      if (same && !stale.includes(r.poll)) stale.push(r.poll);
+      return !same;
+    });
+
+    if (fresh.length === 0) return { week, stored: 0, skipped, stale, error: null };
+
     const { error } = await db.from("rankings").upsert(
-      usable.map((r) => ({ ...r, updated_at: new Date().toISOString() })),
+      fresh.map((r) => ({ ...r, updated_at: new Date().toISOString() })),
     );
     if (error) throw new Error(error.message);
-    return { week, stored: usable.length, skipped, error: null };
+    return { week, stored: fresh.length, skipped, stale, error: null };
   } catch (cause) {
     return {
       week,
       stored: 0,
       skipped: [],
+      stale: [],
       error: cause instanceof Error ? cause.message : "rankings fetch failed",
     };
   }
