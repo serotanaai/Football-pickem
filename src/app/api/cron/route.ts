@@ -59,12 +59,32 @@ export async function GET(request: Request) {
     // This also runs on the ordinary schedule now rather than only under
     // ?rankings=1, and covers the week after the last one in play — that is the
     // poll the next board is waiting on.
-    const rankingWeeks = [...new Set([...weeks, Math.max(...weeks) + 1])];
+    const next = Math.max(...weeks) + 1;
+
+    // Polls are only pulled for the week in play and the one being prepared.
+    //
+    // Asking for a week whose games are over rewrites its poll with whatever
+    // ESPN answers today, and today's answer is the poll published *after* that
+    // week. Week 2 was overwritten exactly that way: it ended up holding the
+    // post-week-2 poll, so the record of what was true while week 2 was being
+    // picked is gone. A finished week's poll is history and nothing should be
+    // writing to it.
+    const rankingWeeks = [...new Set([Math.max(...weeks), next])];
     const rankings = [];
     for (const week of rankingWeeks) rankings.push(await syncRankings(db, season, week));
 
+    // The scoreboard covers the same window as the poll, which it did not
+    // before: weeks came back as the week in play alone, so the week being
+    // prepared was fetched once, whenever it first appeared, and never again.
+    // Its games kept the ranks they were born with — nine days stale by the
+    // time anyone noticed, still showing the preseason number one.
+    //
+    // That is not only a display problem. curatedRank rides in on the
+    // scoreboard and lands on the games rows, and a top-25 board is cut from
+    // those, so a board built on them is cut from a poll that has since moved.
+    const gameWeeks = [...new Set([...weeks, next])];
     const results: Record<string, unknown> = {};
-    for (const week of weeks) {
+    for (const week of gameWeeks) {
       results[`week_${week}`] = await syncWeek(db, season, week);
     }
 
@@ -78,12 +98,17 @@ export async function GET(request: Request) {
       detail: { season, weeks: rankingWeeks, results: rankings },
     });
 
-    const leagues = await refreshLeagues(db, season, weeks);
+    // Boards are built over the same window too, so the week being prepared is
+    // cut as soon as its poll lands rather than waiting for it to become the
+    // week in play. generate_week_board still refuses a week whose AP poll is
+    // not stored, so widening this does not open a board early — it only stops
+    // one opening late.
+    const leagues = await refreshLeagues(db, season, gameWeeks);
     return NextResponse.json({
       ok: true,
       seededTeams: teams,
       season,
-      weeks,
+      weeks: gameWeeks,
       rankings,
       results,
       leagues,
