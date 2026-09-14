@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
   FBS_CONFERENCES,
@@ -98,6 +100,51 @@ export type RankingSync = {
  * also grades picks and builds boards — but the reason now travels back with
  * the count and out through the response.
  */
+/**
+ * Appends one capture per distinct poll to public.ranking_history.
+ *
+ * Deliberately swallows its own failure. This is a safety net, and a safety net
+ * that can take down the thing it is protecting is worse than no net at all —
+ * a write error here must not stop the poll reaching public.rankings, which is
+ * what the boards and the gate actually run on.
+ */
+async function recordPollObservation(
+  db: Supabase,
+  season: number,
+  week: number,
+  fetched: { poll: string; rank: number; team_id: number; points: number | null }[],
+  skipped: number[],
+) {
+  try {
+    const byPoll = new Map<string, typeof fetched>();
+    for (const row of fetched) {
+      const bucket = byPoll.get(row.poll) ?? [];
+      bucket.push(row);
+      byPoll.set(row.poll, bucket);
+    }
+
+    const rows = [...byPoll.entries()].map(([poll, entries]) => {
+      const ordered = [...entries].sort((a, b) => a.rank - b.rank);
+      const digest = createHash("md5")
+        .update(ordered.map((r) => `${r.rank}:${r.team_id}`).join(","))
+        .digest("hex");
+      const known = new Set(ordered.map((r) => r.team_id));
+      return {
+        season,
+        week,
+        poll,
+        digest,
+        teams: ordered.map((r) => ({ rank: r.rank, team_id: r.team_id, points: r.points })),
+        skipped: skipped.filter((id) => known.has(id)),
+      };
+    });
+
+    if (rows.length > 0) await db.from("ranking_history").insert(rows);
+  } catch {
+    // Recorded nothing. The poll still reaches public.rankings below.
+  }
+}
+
 export async function syncRankings(
   db: Supabase,
   season: number,
@@ -122,6 +169,20 @@ export async function syncRankings(
 
     const usable = rankings.filter((r) => haveIds.has(r.team_id));
     const skipped = ids.filter((id) => !haveIds.has(id));
+
+    // Write down what we were shown, before anything is judged or discarded.
+    //
+    // public.rankings is a working set and gets upserted, so it only ever holds
+    // the latest answer — which is how week 2's poll came to be overwritten by
+    // the poll published after week 2, unrecoverably. This is the other thing:
+    // append-only, no foreign key, the full poll including the entries the
+    // working set has to drop. It records what happened rather than what is
+    // currently true, and nothing downstream reads it.
+    //
+    // Keyed by content, so the hourly re-fetch of an unchanged poll collides on
+    // the digest and writes nothing. A row appears only when the poll actually
+    // differs from every version of it we have seen.
+    await recordPollObservation(db, season, week, rankings, skipped);
 
     if (usable.length === 0) {
       return { week, stored: 0, skipped, stale: [], error: "no ranked team is in the teams table" };

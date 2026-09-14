@@ -175,6 +175,29 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["profiles"]["Insert"]>;
         Relationships: [];
       };
+      ranking_history: {
+        Row: {
+          id: number;
+          season: number;
+          week: number;
+          poll: string;
+          digest: string;
+          captured_at: string;
+          teams: unknown;
+          skipped: unknown;
+        };
+        Insert: {
+          season: number;
+          week: number;
+          poll: string;
+          digest: string;
+          captured_at?: string;
+          teams: unknown;
+          skipped?: unknown;
+        };
+        Update: Partial<Database["public"]["Tables"]["ranking_history"]["Insert"]>;
+        Relationships: [];
+      };
       sync_health: {
         Row: {
           kind: string;
