@@ -132,11 +132,36 @@ export async function runEmailSequence(options: RunOptions = {}): Promise<RunSum
     db.from("league_members").select("league_id, user_id").in("league_id", leagueIds),
   ]);
 
+  // A failed read is not an empty result.
+  //
+  // Every one of these was written as `x.data ?? []`, so a query that errored
+  // produced the same value as a query that found nothing — and the run carried
+  // on and built messages out of the difference. That is how twenty-two people
+  // were told they finished week 2 on nil points with a 0-0 record: the
+  // standings read came back empty, every lookup missed, and the template
+  // faithfully rendered zeros. The ledger rows were claimed on the way out, so
+  // it could not even be retried.
+  //
+  // Nothing here is optional. If the database could not answer, the honest move
+  // is to send nothing and let the next run try again.
+  const reads = { tokens, boards, standings, submissions, memberships };
+  for (const [name, read] of Object.entries(reads)) {
+    if (read.error) {
+      summary.errors.push(`${name}: ${read.error.message}`);
+      return summary;
+    }
+  }
+
   const tokenOf = new Map((tokens.data ?? []).map((p) => [p.id, p.unsubscribe_token]));
   const key = (league: string, week: number) => `${league}:${week}`;
   const boardOf = new Map((boards.data ?? []).map((b) => [key(b.league_id, b.week), b]));
   const pickedOf = new Map(
     (submissions.data ?? []).map((s) => [`${s.league_id}:${s.week}:${s.user_id}`, s.pick_count]),
+  );
+
+  /** League-weeks somebody actually submitted a ticket for. */
+  const submittedIn = new Set(
+    (submissions.data ?? []).map((s) => `${s.league_id}:${s.week}`),
   );
 
   // The featured games named by the previews in this batch, with both sides.
@@ -280,6 +305,25 @@ export async function runEmailSequence(options: RunOptions = {}): Promise<RunSum
     let built: { subject: string; html: string; text: string };
 
     if (head.kind === "results") {
+      // A settled week where somebody submitted always has graded picks behind
+      // it. A table with no score anywhere against a league-week that has
+      // tickets in it is not a week everyone sat out — it is a standings read
+      // that came back wrong, and sending it tells people they scored nothing.
+      // Skip without claiming the ledger, so the next run sends the real thing.
+      const unscored = covered.filter((row) => {
+        if (!submittedIn.has(key(row.league_id, row.week))) return false;
+        const table = tableOf.get(key(row.league_id, row.week)) ?? [];
+        return !table.some((r) => scoreOf.has(`${row.league_id}:${row.week}:${r.user_id}`));
+      });
+      if (unscored.length > 0) {
+        summary.errors.push(
+          `no standings for ${unscored.map((r) => `${r.league_name} wk${r.week}`).join(", ")}` +
+            ` — results held back rather than sent as zeros`,
+        );
+        summary.skipped += covered.length;
+        continue;
+      }
+
       built = resultsEmail(
         to,
         covered.map((row) => {

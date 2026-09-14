@@ -4,7 +4,7 @@ import { TeamChip } from "@/components/TeamChip";
 import { createClient } from "@/lib/supabase/server";
 import { loadLeague, parseWeek, resolveCurrentWeek, weekRange } from "@/lib/league";
 import { isLocked, loadMembers, loadWeekBoard, weekIsSettled } from "@/lib/board";
-import { ordinal } from "@/lib/format";
+import { FEATURED_MULTIPLIER, ordinal } from "@/lib/format";
 import { SEASON, WeekPicker } from "../WeekPicker";
 import { SeasonStandings } from "./SeasonStandings";
 
@@ -96,6 +96,14 @@ export default async function ResultsPage({
   // A pick reveals when its own game kicks off, matching how it locked.
   const shownGames = board.games.filter((game) => isLocked(game));
 
+  // The 2.5x game, which every other tab names and this one did not — so the
+  // week that decided the standings above was the one thing the results page
+  // would not tell you about.
+  const featuredId = board.leagueWeek?.featured_game_id ?? null;
+  const featured = featuredId ? board.games.find((game) => game.id === featuredId) : null;
+  const featuredWinner =
+    featured?.winner_team_id === featured?.home_team_id ? featured?.home : featured?.away;
+
   return (
     <div>
       <div
@@ -130,6 +138,47 @@ export default async function ResultsPage({
             {winners[0].points.toLocaleString()} points
             {winners.length > 1 ? " (tied)" : ""}
           </span>
+        </div>
+      ) : null}
+
+      {featured ? (
+        <div className="surface" style={{ padding: "1rem 1.15rem", marginBottom: "1.25rem" }}>
+          <div className="featured-head" style={{ marginBottom: "0.6rem" }}>
+            <span className="chip-featured">Week {week} featured matchup</span>
+            <span className="chip-multiplier">{FEATURED_MULTIPLIER}× points</span>
+          </div>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "0.6rem",
+              flexWrap: "wrap",
+              fontSize: "0.95rem",
+            }}
+          >
+            <TeamChip team={featured.away} rank={featured.away_rank} size={20} />
+            {featured.away_score !== null ? (
+              <strong style={{ fontVariantNumeric: "tabular-nums" }}>
+                {featured.away_score}
+              </strong>
+            ) : null}
+            <span className="muted" style={{ fontSize: "0.8rem" }}>
+              {featured.neutral_site ? "vs" : "@"}
+            </span>
+            <TeamChip team={featured.home} rank={featured.home_rank} size={20} />
+            {featured.home_score !== null ? (
+              <strong style={{ fontVariantNumeric: "tabular-nums" }}>
+                {featured.home_score}
+              </strong>
+            ) : null}
+          </div>
+          <p className="muted" style={{ margin: "0.5rem 0 0", fontSize: "0.85rem" }}>
+            {featured.completed && featuredWinner
+              ? `${featuredWinner.school} won it.`
+              : isLocked(featured)
+                ? "In progress."
+                : "Not started yet."}
+          </p>
         </div>
       ) : null}
 
@@ -189,6 +238,11 @@ export default async function ResultsPage({
                 <tr key={game.id}>
                   <td>
                     <div style={{ display: "grid", gap: "0.2rem" }}>
+                      {game.id === featuredId ? (
+                        <span className="chip-multiplier" style={{ justifySelf: "start" }}>
+                          {FEATURED_MULTIPLIER}× points
+                        </span>
+                      ) : null}
                       <span style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
                         <TeamChip team={game.away} rank={game.away_rank} size={18} />
                         {game.away_score !== null ? (
