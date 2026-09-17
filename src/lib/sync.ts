@@ -100,6 +100,18 @@ export type RankingSync = {
  * also grades picks and builds boards — but the reason now travels back with
  * the count and out through the response.
  */
+/** md5 over the ordered rank:team_id list. Equal digest means equal poll. */
+function digestOf(entries: { rank: number; team_id: number }[]): string {
+  return createHash("md5")
+    .update(
+      [...entries]
+        .sort((a, b) => a.rank - b.rank)
+        .map((r) => `${r.rank}:${r.team_id}`)
+        .join(","),
+    )
+    .digest("hex");
+}
+
 /**
  * Appends one capture per distinct poll to public.ranking_history.
  *
@@ -125,9 +137,7 @@ async function recordPollObservation(
 
     const rows = [...byPoll.entries()].map(([poll, entries]) => {
       const ordered = [...entries].sort((a, b) => a.rank - b.rank);
-      const digest = createHash("md5")
-        .update(ordered.map((r) => `${r.rank}:${r.team_id}`).join(","))
-        .digest("hex");
+      const digest = digestOf(ordered);
       const known = new Set(ordered.map((r) => r.team_id));
       return {
         season,
@@ -215,14 +225,48 @@ export async function syncRankings(
       priorByPoll.set(row.poll, set);
     }
 
+    // The comparison above is necessary and not sufficient.
+    //
+    // It asks "does this match the week before it", and reads that week from
+    // public.rankings — a working set that is itself being written by this same
+    // loop and can be a run behind. Week 4 slipped through exactly there: it was
+    // compared against a week 3 that had not yet been brought up to date, found
+    // to differ, and stored. Half an hour later week 3 was updated to the very
+    // poll week 4 had just been given, and the boards for a week whose poll does
+    // not exist yet were cut from it.
+    //
+    // ranking_history does not move. It is append-only and keyed by content, so
+    // asking it whether we have already seen this exact poll under an earlier
+    // week is a question the answer to which cannot change underneath us. A
+    // genuinely new poll has a digest nobody has ever seen.
+    //
+    // Both checks run, and either one is enough to refuse. The history read is
+    // the reliable one; the week-before comparison stays because it still works
+    // when history is thin — a fresh season, or a restored database.
+    const seenBefore = await db
+      .from("ranking_history")
+      .select("poll, digest")
+      .eq("season", season)
+      .lt("week", week);
+
+    const seenDigests = new Set(
+      (seenBefore.data ?? []).map((r) => `${r.poll}:${r.digest}`),
+    );
+
     const stale: string[] = [];
     const fresh = usable.filter((r) => {
-      const prior = priorByPoll.get(r.poll);
-      if (!prior || prior.size === 0) return true;
       const current = usable.filter((u) => u.poll === r.poll);
-      const same =
+
+      const prior = priorByPoll.get(r.poll);
+      const matchesWeekBefore =
+        !!prior &&
+        prior.size > 0 &&
         current.length === prior.size &&
         current.every((u) => prior.has(`${u.rank}:${u.team_id}`));
+
+      const publishedEarlier = seenDigests.has(`${r.poll}:${digestOf(current)}`);
+
+      const same = matchesWeekBefore || publishedEarlier;
       if (same && !stale.includes(r.poll)) stale.push(r.poll);
       return !same;
     });
