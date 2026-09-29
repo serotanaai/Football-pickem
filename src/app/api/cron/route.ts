@@ -4,6 +4,7 @@ import {
   refreshLeagues,
   resolveWindow,
   syncConferences,
+  governedWeek,
   syncRankings,
   syncSecretMatches,
   syncTeams,
@@ -61,15 +62,20 @@ export async function GET(request: Request) {
     // poll the next board is waiting on.
     const next = Math.max(...weeks) + 1;
 
-    // Polls are only pulled for the week in play and the one being prepared.
+    // One poll, filed under the week it governs.
     //
-    // Asking for a week whose games are over rewrites its poll with whatever
-    // ESPN answers today, and today's answer is the poll published *after* that
-    // week. Week 2 was overwritten exactly that way: it ended up holding the
-    // post-week-2 poll, so the record of what was true while week 2 was being
-    // picked is gone. A finished week's poll is history and nothing should be
-    // writing to it.
-    const rankingWeeks = [...new Set([Math.max(...weeks), next])];
+    // This asked for two weeks and let the answer land on whichever it asked
+    // for first — which is the week that just finished, because ESPN returns
+    // the newest poll it has whatever week is in the request. The duplicate
+    // guard then refused the same poll for the second week, so the filing
+    // slipped one week further every Sunday: week 4 and week 6 holding the same
+    // poll with week 5 empty between them, and week 5's board shut two days
+    // before kickoff because the gate could not find a poll for it.
+    //
+    // governedWeek asks the calendar instead of the request: a poll published
+    // now governs the earliest week nobody can still pick, which is the only
+    // week it was ever about. One fetch, one week, no race to lose.
+    const rankingWeeks = [(await governedWeek(db, season)) ?? next];
     const rankings = [];
     for (const week of rankingWeeks) rankings.push(await syncRankings(db, season, week));
 

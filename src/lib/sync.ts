@@ -100,6 +100,39 @@ export type RankingSync = {
  * also grades picks and builds boards — but the reason now travels back with
  * the count and out through the response.
  */
+/**
+ * The week a poll published right now would govern.
+ *
+ * ESPN is asked for a week and answers with the newest poll it has, whatever
+ * week that is. So the week in the request decides nothing and the week in the
+ * answer is not carried — which left the filing to whichever week the cron
+ * happened to ask for first, and that is the week that just *finished*. Every
+ * Sunday the numbering slipped one further: week 4 and week 6 ended up holding
+ * the same poll with week 5 empty between them, and week 5's board would not
+ * open because the gate could not find a poll for it.
+ *
+ * A poll published after week N's games governs week N+1 — the next week anyone
+ * can still pick. So that is what it is filed under: the earliest week whose
+ * first game has not kicked off. Nothing about the request, everything about
+ * the calendar.
+ */
+export async function governedWeek(
+  db: Supabase,
+  season: number,
+): Promise<number | null> {
+  const { data } = await db
+    .from("games")
+    .select("week, start_time")
+    .eq("season", season)
+    .eq("season_type", 2)
+    .gt("start_time", new Date().toISOString())
+    .order("start_time", { ascending: true })
+    .limit(1);
+
+  const week = data?.[0]?.week;
+  return typeof week === "number" ? week : null;
+}
+
 /** md5 over the ordered rank:team_id list. Equal digest means equal poll. */
 function digestOf(entries: { rank: number; team_id: number }[]): string {
   return createHash("md5")
