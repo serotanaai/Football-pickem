@@ -1,15 +1,31 @@
 import Link from "next/link";
+import type { TickerState } from "@/lib/ticker";
+import { Ticker } from "./Ticker";
 import { StickyHeader } from "./StickyHeader";
 
 export function AppShell({
   email,
+  ticker,
   children,
 }: {
   email?: string | null;
+  /**
+   * The scoreboard strip, for the pages where the week is the point: what is
+   * on, what it finished, and how long until the next one. Optional because
+   * not every page in this shell wants it -- a picks board is already a list
+   * of these games, and a settings form is not about the week at all.
+   */
+  ticker?: TickerState | null;
   children: React.ReactNode;
 }) {
   return (
     <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
+      {ticker ? (
+        <div className="ticker-flow">
+          <Ticker initial={ticker} />
+        </div>
+      ) : null}
+
       <StickyHeader>
         <div className="app-header-inner">
           <Link href="/dashboard" className="brand">

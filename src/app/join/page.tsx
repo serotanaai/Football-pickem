@@ -4,6 +4,7 @@ import { Badge } from "@/components/Badge";
 import { Reveal } from "@/components/Reveal";
 import { CapNotice, LeagueActionButton } from "@/components/CapNotice";
 import { DEFAULT_SEASON } from "@/lib/env";
+import { loadTicker } from "@/lib/ticker";
 import { createClient } from "@/lib/supabase/server";
 import { scopeBadge } from "@/lib/format";
 import {
@@ -39,7 +40,8 @@ export default async function JoinPage({
   const search = (q ?? "").trim();
 
   const supabase = await createClient();
-  const [count, week, players, leagueBoard, browse] = await Promise.all([
+  const [ticker, count, week, players, leagueBoard, browse] = await Promise.all([
+    loadTicker(),
     leagueCountThisSeason(user.id, DEFAULT_SEASON),
     supabase.rpc("leaderboard_week", { p_season: DEFAULT_SEASON, p_week: null, p_limit: 5 }),
     supabase.rpc("leaderboard_players", { p_season: DEFAULT_SEASON, p_limit: 5 }),
@@ -57,7 +59,7 @@ export default async function JoinPage({
   const leagues = browse.data ?? [];
 
   return (
-    <AppShell email={user.email}>
+    <AppShell email={user.email} ticker={ticker}>
       <h1 style={{ fontSize: "1.4rem", margin: "0 0 0.35rem", letterSpacing: "-0.02em" }}>
         Join a league
       </h1>

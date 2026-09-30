@@ -879,6 +879,15 @@ dialog.modal[open]::backdrop {
   -webkit-backdrop-filter: blur(10px) saturate(120%);
 }
 
+/* Inside the app shell the sticky header already owns the top of the viewport.
+   Two elements stuck at top: 0 means one covers the other -- and the bar wins
+   on z-index, so it would sit over the nav. Here it rides at the top of the
+   page and scrolls away, which is the right order of importance anyway: the
+   header is how you get around, the bar is something to glance at. */
+.ticker-flow .ticker {
+  position: static;
+}
+
 .ticker-inner {
   max-width: 940px;
   margin: 0 auto;

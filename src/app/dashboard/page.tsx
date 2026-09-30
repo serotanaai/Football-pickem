@@ -13,6 +13,7 @@ import { ordinal, scopeBadge } from "@/lib/format";
 import { openBoards } from "@/lib/board";
 import { PicksDue } from "@/components/PicksDue";
 import { DEFAULT_SEASON } from "@/lib/env";
+import { loadTicker } from "@/lib/ticker";
 
 export const dynamic = "force-dynamic";
 
@@ -28,6 +29,7 @@ export default async function DashboardPage() {
   const leagueIds = (memberships ?? []).map((m) => m.league_id);
 
   const [
+    ticker,
     { data: leagues },
     { data: conferences },
     { data: standings },
@@ -35,6 +37,7 @@ export default async function DashboardPage() {
     { data: weeks },
     { data: submissions },
   ] = await Promise.all([
+    loadTicker(),
     leagueIds.length
       ? supabase.from("leagues").select("*").in("id", leagueIds)
       : Promise.resolve({ data: [] as never[] }),
@@ -101,7 +104,7 @@ export default async function DashboardPage() {
   const atCap = leagueCount >= MAX_LEAGUES_PER_SEASON;
 
   return (
-    <AppShell email={user.email}>
+    <AppShell email={user.email} ticker={ticker}>
       <div
         style={{
           display: "flex",

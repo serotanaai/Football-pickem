@@ -11,6 +11,7 @@ import {
   MAX_LEAGUES_PER_SEASON,
 } from "@/lib/league";
 import { JoinForm } from "../JoinForm";
+import { loadTicker } from "@/lib/ticker";
 import { loadInvitePreview } from "./invite";
 
 export const dynamic = "force-dynamic";
@@ -61,7 +62,10 @@ export default async function InvitePage({
     redirect(`/login?next=${encodeURIComponent(`/join/${code}`)}`);
   }
 
-  const { data } = await supabase.rpc("league_preview_by_code", { p_code: code });
+  const [{ data }, ticker] = await Promise.all([
+    supabase.rpc("league_preview_by_code", { p_code: code }),
+    loadTicker(),
+  ]);
   const league = data?.[0] ?? null;
 
   // Say so before they click, rather than letting a trigger refuse the join.
@@ -71,7 +75,7 @@ export default async function InvitePage({
   const isFull = league ? Number(league.member_count) >= MAX_LEAGUE_MEMBERS : false;
 
   return (
-    <AppShell email={user.email}>
+    <AppShell email={user.email} ticker={ticker}>
       <div style={{ maxWidth: 460 }}>
         {league ? (
           <>
