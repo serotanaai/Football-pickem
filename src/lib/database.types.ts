@@ -582,6 +582,14 @@ export interface Database {
         Args: { p_season: number; p_week: number };
         Returns: boolean;
       };
+      week_board_waiting_on: {
+        Args: { p_season: number; p_week: number };
+        Returns: "cfp" | "ap" | null;
+      };
+      cfp_backstop: {
+        Args: { p_season: number; p_week: number };
+        Returns: string;
+      };
     };
     Enums: {
       league_scope: LeagueScope;

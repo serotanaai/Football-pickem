@@ -182,7 +182,13 @@ async function recordPollObservation(
       };
     });
 
-    if (rows.length > 0) await db.from("ranking_history").insert(rows);
+    // Upsert, not insert: one batch carries every poll, and a plain insert
+    // fails whole on the first digest already on file -- which on most runs
+    // meant a brand-new poll in the same batch was never recorded at all.
+    if (rows.length > 0)
+      await db
+        .from("ranking_history")
+        .upsert(rows, { onConflict: "season,week,poll,digest", ignoreDuplicates: true });
   } catch {
     // Recorded nothing. The poll still reaches public.rankings below.
   }
